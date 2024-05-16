@@ -21,7 +21,8 @@ const calculateStock = async (sizeId, orderDetails) => {
     // Subtract quantities from orders if orderDetails exist
     if (Array.isArray(orderDetails)) {
       for (const order of orderDetails) {
-        if (order && order.statusId !== "S7" && order.sizeId === sizeId) { // S7: hủy đơn
+        if (order && order.statusId !== "S7" && order.sizeId === sizeId) {
+          // S7: hủy đơn
           totalQuantity -= order.quantity;
         }
       }
@@ -59,71 +60,44 @@ const addShopCart = async (data, orderDetails) => {
   }
 };
 
-// const getShopCartByUserId = async (userId) => {
-//   try {
-//     if (!userId) {
-//       return errorResponse("Missing required parameter userId!");
-//     }
-//     const shopCartItems = await db.ShopCart.findAll({
-//       where: { userId: userId, statusId: 0 },
-//       raw: true,
-//     });
-//     if (!shopCartItems || shopCartItems.length === 0) {
-//       return errorResponse("No shop cart items found for the user!");
-//     }
-//     const data = [];
-//     for (const item of shopCartItems) {
-//       const productDetail = await db.ProductDetail.findOne({
-//         where: { id: item.sizeId },
-//         include: [
-//           {
-//             model: db.Product,
-//             as: "productData",
-//             attributes: ["name"],
-//           },
-//           {
-//             model: db.ProductImage,
-//             as: "productImageData",
-//             attributes: ["image"],
-//           },
-//           { model: db.ProductSize, as: "sizeData", attributes: ["sizeId"] },
-//         ],
-//         raw: true,
-//       });
+const updateShopCart = async (data, orderDetails) => {
+  try {
+    const { userId, sizeId, quantity } = data;
+    if (!userId || !sizeId || !quantity) {
+      return missingRequiredParams("user, size, quantity are");
+    }
 
-//       if (!productDetail) {
-//         continue;
-//       }
-//       const productImages = productDetail.productImageData;
-//       if (productImages) {
-//         const productImages = productImages.map(
-//           (productImage) => productImage.image
-//         );
-//       }
-//       data.push({
-//         id: item.id,
-//         userId: item.userId,
-//         sizeId: item.sizeId,
-//         sideData: productDetail["sizeData.sizeId"],
-//         quantity: item.quantity,
-//         productId: productDetail.productId,
-//         name: productDetail["productData.name"],
-//         image: productDetail["productImageData.image"],
-//         color: productDetail.color,
-//         originalPrice: productDetail.originalPrice,
-//         discountPrice: productDetail.discountPrice,
-//       });
-//     }
-//     return {
-//       result: data,
-//       statusCode: 200,
-//       errors: [`Get items with userId = ${userId} successfully!`],
-//     };
-//   } catch (error) {
-//     console.error("Error in getShopCartByUserId:", error);
-//     return errorResponse(error.message);
-//   }
-// };
+    const stock = await calculateStock(sizeId, orderDetails);
+    if (+quantity > stock) {
+      return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
+    }
+    let [updatedRowsCount] = await db.ShopCart.update(
+      { quantity },
+      {
+        where: {
+          userId,
+          sizeId,
+          statusId: 0, // Giỏ hàng chưa thanh toán
+        },
+      }
+    );
+
+    if (updatedRowsCount === 0) {
+      await db.ShopCart.create({
+        userId,
+        sizeId,
+        quantity,
+        statusId: 0,
+      });
+      return successResponse("Add items into shop cart");
+    }
+
+    return successResponse("Update shop cart successfully");
+  } catch (error) {
+    console.error("Error in updateShopCart:", error);
+    return errorResponse("Error from server");
+  }
+};
 
 const getShopCartByUserId = async (userId) => {
   try {
@@ -216,4 +190,4 @@ const deleteItem = async (data) => {
   }
 };
 
-export default { addShopCart, getShopCartByUserId, deleteItem };
+export default { addShopCart, updateShopCart, getShopCartByUserId, deleteItem };

@@ -269,6 +269,7 @@ const webRoutes = (app) => {
 
   //---------------------------API SHOP-CART------------------------------//
   router.post("/api/shop-cart/add", shopCartController.addShopCart);
+  router.put("/api/shop-cart/update", shopCartController.updateShopCart);
   router.get(
     "/api/shop-cart/by-user-id",
     shopCartController.getShopCartByUserId
