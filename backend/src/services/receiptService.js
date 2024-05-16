@@ -35,13 +35,11 @@ const getReceiptById = async (id) => {
     if (!id) {
       return errorResponse("Missing required parameter!");
     }
-
     const receipt = await db.Receipt.findOne({ where: { id } });
 
     if (!receipt) {
       return notFound(`Receipt ${id} not found`);
     }
-
     const supplier = await db.Supplier.findOne({
       where: { id: receipt.supplierId },
       attributes: ["email", "name"],
@@ -50,7 +48,51 @@ const getReceiptById = async (id) => {
     if (!supplier) {
       return notFound(`Supplier for receipt ${id} not found`);
     }
-
+    const receiptDetails = await db.ReceiptDetail.findAll({
+      where: { receiptId: receipt.id },
+      attributes: ["sizeId", "quantity"],
+    });
+    const getProductDetails = async (sizeIds) => {
+      const productDetails = [];
+      for (const detail of sizeIds) {
+        const productSize = await db.ProductSize.findOne({
+          where: { id: detail.sizeId },
+          attributes: ["productDetailId"],
+        });
+        if (productSize) {
+          const productDetail = await db.ProductDetail.findOne({
+            where: { id: productSize.productDetailId },
+            attributes: ["productId", "id"],
+          });
+          if (productDetail && productDetail.productId) {
+            productDetails.push({
+              productId: productDetail.productId,
+              productDetailId: productDetail.id,
+            });
+          } else {
+            console.error(
+              "ProductId or productDetail not found for sizeId::",
+              detail.sizeId
+            );
+            productDetails.push({
+              productId: null,
+              productDetailId: null,
+            });
+          }
+        } else {
+          console.error("ProductSize not found for sizeId:", detail.sizeId);
+          productDetails.push({
+            productId: null,
+            productDetailId: null,
+          });
+        }
+      }
+      return productDetails;
+    };
+    const sizeIds = receiptDetails.map((detail) => ({
+      sizeId: detail.sizeId,
+    }));
+    const productDetails = await getProductDetails(sizeIds);
     const formattedReceipt = {
       id: receipt.id,
       supplier: {
@@ -59,16 +101,25 @@ const getReceiptById = async (id) => {
       },
       createdAt: receipt.createdAt,
       updatedAt: receipt.updatedAt,
+      products: [],
     };
+    receiptDetails.forEach((detail, index) => {
+      formattedReceipt.products.push({
+        productId: productDetails[index].productId,
+        productDetailId: productDetails[index].productDetailId,
+        quantity: detail.quantity,
+        sizeId: detail.sizeId,
+      });
+    });
 
     return {
       result: [formattedReceipt],
       statusCode: 200,
-      errors: [`Receipt ${id} found successfully!`],
+      errors: [`Get receipt with id = ${id} successfully!`],
     };
   } catch (error) {
-    console.error("Error in getReceiptById:", error);
-    return errorResponse("Failed to get detail receipt", 500);
+    console.error(error);
+    return errorResponse(error.message);
   }
 };
 
@@ -79,7 +130,6 @@ const getAllReceipt = async (data) => {
       objectFilter.limit = +data.limit;
       objectFilter.offset = +data.offset;
     }
-
     const receipts = await db.Receipt.findAndCountAll(objectFilter);
     const receiptData = [];
     for (let i = 0; i < receipts.rows.length; i++) {
@@ -97,20 +147,73 @@ const getAllReceipt = async (data) => {
           },
           createdAt: receipt.createdAt,
           updatedAt: receipt.updatedAt,
+          receiptDetails: [],
         },
       };
+      const receiptDetails = await db.ReceiptDetail.findAll({
+        where: { receiptId: receipt.id },
+        attributes: ["sizeId", "quantity"],
+      });
+      const getProductDetails = async (sizeIds) => {
+        const productDetails = [];
+        for (const detail of sizeIds) {
+          const productSize = await db.ProductSize.findOne({
+            where: { id: detail.sizeId },
+            attributes: ["productDetailId"],
+          });
+          if (productSize) {
+            const productDetail = await db.ProductDetail.findOne({
+              where: { id: productSize.productDetailId },
+              attributes: ["productId", "id"],
+            });
+            if (productDetail && productDetail.productId) {
+              productDetails.push({
+                productId: productDetail.productId,
+                productDetailId: productDetail.id,
+              });
+            } else {
+              console.error(
+                "ProductId or productDetail not found for sizeId::",
+                detail.sizeId
+              );
+              productDetails.push({
+                productId: null,
+                productDetailId: null,
+              });
+            }
+          } else {
+            console.error("ProductSize not found for sizeId:", detail.sizeId);
+            productDetails.push({
+              productId: null,
+              productDetailId: null,
+            });
+          }
+        }
+        return productDetails;
+      };
+      const sizeIds = receiptDetails.map((detail) => ({
+        sizeId: detail.sizeId,
+      }));
+      const productDetails = await getProductDetails(sizeIds);
 
+      receiptDetails.forEach((detail, index) => {
+        formattedReceipt.receipt.receiptDetails.push({
+          productId: productDetails[index].productId,
+          productDetailId: productDetails[index].productDetailId,
+          quantity: detail.quantity,
+          sizeId: detail.sizeId,
+        });
+      });
       receiptData.push(formattedReceipt);
     }
-
     return {
       result: receiptData,
       statusCode: 200,
-      errors: ["All receipts retrieved successfully!"],
+      errors: ["Get all receipts successfully!"],
     };
   } catch (error) {
-    console.error("Error in getAllReceipt:", error);
-    return errorResponse("Failed to get all receipts", 500);
+    console.error(error);
+    return errorResponse(error.message);
   }
 };
 
