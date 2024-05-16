@@ -333,7 +333,12 @@ const getProductById = async (data) => {
       raw: true,
       nest: true,
     });
-
+    const colors = await db.sequelize.query(`
+      SELECT color FROM product_details where productId = ${data.id}
+    `, { type: db.sequelize.QueryTypes.SELECT });
+    const images = await db.sequelize.query(`
+    SELECT image FROM product_images where productDetailId = ${data.id}
+  `, { type: db.sequelize.QueryTypes.SELECT });
     // If no product details found, return error
     if (!productDetails.rows.length) {
       return notFound("Product details");
@@ -352,25 +357,25 @@ const getProductById = async (data) => {
         categoryData: { value: category },
       },
     } = firstProductDetail;
-
+    console.log(firstProductDetail);
     // Initialize arrays for colors, images, and sizes
-    let colors = [];
-    let images = [];
+    // let colors = [];
+    // let images = [];
     let sizes = [];
 
     // Iterate through each product detail
     productDetails.rows.forEach((productDetail) => {
       // Push size to the array if it exists and is not already included
-      if (
-        productDetail.sizeData &&
-        productDetail.sizeData.sizeId &&
-        !sizes.some((size) => size.id === productDetail.sizeData.id)
-      ) {
-        sizes.push({
-          id: productDetail.sizeData.id,
-          name: productDetail.sizeData.sizeId,
-        });
-      }
+      // if (
+      //   productDetail.sizeData &&
+      //   productDetail.sizeData.sizeId &&
+      //   !sizes.some((size) => size.id === productDetail.sizeData.id)
+      // ) {
+      //   sizes.push({
+      //     id: productDetail.sizeData.id,
+      //     name: productDetail.sizeData.sizeId,
+      //   });
+      // }
 
       // Push image to the array if it exists
       if (
@@ -385,15 +390,15 @@ const getProductById = async (data) => {
       }
 
       // Push color to the array if it exists and is not already included
-      if (
-        productDetail.color &&
-        !colors.some((color) => color.name === productDetail.color)
-      ) {
-        colors.push({
-          id: colors.length + 1, // Generate a unique id for the color
-          name: productDetail.color,
-        });
-      }
+      // if (
+      //   productDetail.color &&
+      //   !colors.some((color) => color.name === productDetail.color)
+      // ) {
+      //   colors.push({
+      //     id: colors.length + 1, // Generate a unique id for the color
+      //     name: productDetail.color,
+      //   });
+      // }
     });
 
     return {
