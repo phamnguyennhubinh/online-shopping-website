@@ -474,6 +474,43 @@ const updateProduct = async (data) => {
   }
 };
 
+const deleteProduct = async (productId) => {
+  try {
+    if (!productId) {
+      return missingRequiredParams("Product ID is");
+    }
+    await db.sequelize.transaction(async (transaction) => {
+      const product = await db.Product.findOne({
+        where: { id: productId },
+        transaction,
+      });
+      if (!product) {
+        return notFound("Product");
+      }
+      const productDetails = await db.ProductDetail.findAll({
+        where: { productId },
+        transaction,
+      });
+      const productDetailIds = productDetails.map((detail) => detail.id);
+      await db.ProductImage.destroy({
+        where: { productDetailId: productDetailIds },
+        transaction,
+      });
+      await db.ProductSize.destroy({
+        where: { productDetailId: productDetailIds },
+        transaction,
+      });
+      await db.ProductDetail.destroy({ where: { productId }, transaction });
+      await db.Product.destroy({ where: { id: productId }, transaction });
+    });
+
+    return successResponse("Delete product successfully");
+  } catch (error) {
+    console.error(error);
+    return errorResponse(error.message);
+  }
+};
+
 // PRODUCT DETAIL
 const createProductDetail = async (data) => {
   try {
@@ -594,36 +631,6 @@ const deleteProductDetail = async (data) => {
 };
 
 // PRODUCT IMAGE
-
-// const uploadFiles = async (files) => {
-//   const uploadDirectory = "./uploads";
-
-//   try {
-//     await fs.access(uploadDirectory);
-//   } catch (error) {
-//     await fs.mkdir(uploadDirectory);
-//   }
-
-//   const fileUploadPromises = files.map(async (file) => {
-//     const fileExtension = path.extname(file.originalname);
-//     const fileName = `${Date.now()}${fileExtension}`;
-//     const filePath = path.join(uploadDirectory, fileName);
-
-//     await fs.rename(file.path, filePath);
-//     return fileName;
-//   });
-
-//   return Promise.all(fileUploadPromises);
-// };
-
-// const saveProductImages = async (productDetailId, imagePaths) => {
-//   const imageRecords = imagePaths.map((imagePath) => ({
-//     productDetailId,
-//     image: imagePath,
-//   }));
-
-//   await db.ProductImage.bulkCreate(imageRecords);
-// };
 
 const uploadFiles = async (files) => {
   const uploadDirectory = "./uploads";
@@ -830,7 +837,8 @@ const getAllProductSize = async (data) => {
         const order = await db.Order.findOne({
           where: { id: orderDetail[k].orderId },
         });
-        if (order.statusId != "S7") { //S7: hủy đơn
+        if (order.statusId != "S7") {
+          //S7: hủy đơn
           quantity -= orderDetail[k].quantity;
         }
       }
@@ -1177,6 +1185,7 @@ export default {
   activeProduct,
   getProductById,
   updateProduct,
+  deleteProduct,
   createProductDetail,
   getProductDetailById,
   updateProductDetail,

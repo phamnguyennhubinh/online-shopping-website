@@ -78,6 +78,12 @@ const webRoutes = (app) => {
     productController.updateProduct
   );
 
+  router.delete(
+    "/api/product/delete",
+    middlewareControllers.verifyTokenAdmin,
+    productController.deleteProduct
+  );
+
   // PRODUCT DETAIL
   router.post(
     "/api/product/detail/create",

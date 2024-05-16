@@ -10,7 +10,6 @@ module.exports = (sequelize, DataTypes) => {
         as: "sizeData",
       });
     }
-    
   }
   ProductSize.init(
     {

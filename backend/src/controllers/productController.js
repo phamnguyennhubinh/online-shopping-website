@@ -23,34 +23,7 @@ const handleRequest = async (handler, req, res) => {
 
 // PRODUCT
 const createProduct = async (req, res) => {
-  try {
-    const productData = {
-      name: req.body.name,
-      content: req.body.content,
-      categoryId: req.body.categoryId,
-      brandId: req.body.brandId,
-      color: req.body.color,
-      originalPrice: req.body.originalPrice,
-      discountPrice: req.body.discountPrice,
-      height: req.body.height,
-      weight: req.body.weight,
-      sizeId: req.body.sizeId,
-    };
-
-    let images = [];
-    if (req.files && Array.isArray(req.files)) {
-      images = req.files.map((file) => file.path);
-    }
-
-    const result = await createProduct(productData, images);
-    return {
-      result: [result],
-      statusCode: 200,
-      errors: ["Success!"],
-    };
-  } catch (error) {
-    return errorResponse(error.message);
-  }
+  await handleRequest(productService.createProduct, req, res);
 };
 
 const getAllProductAdmin = async (req, res) => {
@@ -107,6 +80,15 @@ const updateProduct = async (req, res) => {
   await handleRequest(productService.updateProduct, req, res);
 };
 
+const deleteProduct = async (req, res) => {
+  try {
+    const data = await productService.deleteProduct(req.query.productId);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
+};
 // PRODUCT DETAIL
 const createProductDetail = async (req, res) => {
   await handleRequest(productService.createProductDetail, req, res);
@@ -322,6 +304,7 @@ export default {
   inActiveProduct,
   activeProduct,
   updateProduct,
+  deleteProduct,
   createProductDetail,
   getProductDetailById,
   updateProductDetail,
