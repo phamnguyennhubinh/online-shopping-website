@@ -21,17 +21,17 @@ const webRoutes = (app) => {
   router.post("/api/user/login", userController.loginUser);
   router.put(
     "/api/user/update",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     userController.updateUser
   );
   router.delete(
     "/api/user/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     userController.deleteUser
   );
   router.get(
     "/api/user",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     userController.getAllUser
   );
   router.get("/api/user/get-by-id", userController.getUserById);
@@ -52,29 +52,31 @@ const webRoutes = (app) => {
   //---------------------------API PRODUCT------------------------------//
   router.post(
     "/api/product/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
+    upload.array("images"),
     productController.createProduct
   );
   router.get(
     "/api/product/get-all-admin",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.getAllProductAdmin
   );
   router.get("/api/product/get-all-user", productController.getAllProductUser);
   router.get("/api/product/get-by-id", productController.getProductById);
   router.post(
     "/api/product/inActive",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.inActiveProduct
   );
   router.post(
     "/api/product/active",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.activeProduct
   );
   router.put(
     "/api/product/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
+    upload.array("images"),
     productController.updateProduct
   );
 
@@ -87,7 +89,7 @@ const webRoutes = (app) => {
   // PRODUCT DETAIL
   router.post(
     "/api/product/detail/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.createProductDetail
   );
   router.get(
@@ -96,19 +98,19 @@ const webRoutes = (app) => {
   );
   router.put(
     "/api/product/detail/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.updateProductDetail
   );
   router.delete(
     "/api/product/detail/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.deleteProductDetail
   );
 
   // PRODUCT IMAGE
   router.post(
     "/api/product/upload-files",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     upload.array("images"),
     productController.uploadProductImages
   );
@@ -119,20 +121,20 @@ const webRoutes = (app) => {
   );
   router.put(
     "/api/product/image/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     upload.array("images"),
     productController.updateProductImage
   );
   router.delete(
     "/api/product/image/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.deleteProductImage
   );
 
   // PRODUCT SIZE
   router.post(
     "/api/product/size/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.createProductSize
   );
   router.get("/api/product/size", productController.getAllProductSize);
@@ -142,12 +144,12 @@ const webRoutes = (app) => {
   );
   router.put(
     "/api/product/size/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.updateProductSize
   );
   router.delete(
     "/api/product/size/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     productController.deleteProductSize
   );
   router.get("/api/product/get-feature", productController.getProductFeature);
@@ -158,26 +160,26 @@ const webRoutes = (app) => {
   //---------------------------API TYPE-SHIP------------------------------//
   router.post(
     "/api/type-ship/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     typeShipController.createTypeShip
   );
   router.get("/api/type-ship/get-by-id", typeShipController.getTypeShipById);
   router.get("/api/type-ship", typeShipController.getAllTypeShip);
   router.put(
     "/api/type-ship/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     typeShipController.updateTypeShip
   );
   router.delete(
     "/api/type-ship/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     typeShipController.deleteTypeShip
   );
 
   //---------------------------API TYPE-VOUCHER------------------------------//
   router.post(
     "/api/type-voucher/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     voucherController.createTypeVoucher
   );
   router.get(
@@ -187,12 +189,12 @@ const webRoutes = (app) => {
   router.get("/api/type-voucher", voucherController.getAllTypeVoucher);
   router.put(
     "/api/type-voucher/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     voucherController.updateTypeVoucher
   );
   router.delete(
     "/api/type-voucher/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     voucherController.deleteTypeVoucher
   );
   router.get(
@@ -203,19 +205,19 @@ const webRoutes = (app) => {
   //---------------------------API VOUCHER------------------------------//
   router.post(
     "/api/voucher/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     voucherController.createVoucher
   );
   router.get("/api/voucher/get-by-id", voucherController.getVoucherById);
   router.get("/api/voucher", voucherController.getAllVoucher);
   router.put(
     "/api/voucher/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     voucherController.updateVoucher
   );
   router.delete(
     "/api/voucher/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     voucherController.deleteVoucher
   );
   router.post(
@@ -231,37 +233,37 @@ const webRoutes = (app) => {
   //---------------------------API SUPPLIER------------------------------//
   router.post(
     "/api/supplier/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     supplierController.createSupplier
   );
   router.get("/api/supplier/get-by-id", supplierController.getSupplierById);
   router.get("/api/supplier", supplierController.getAllSupplier);
   router.put(
     "/api/supplier/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     supplierController.updateSupplier
   );
   router.delete(
     "/api/supplier/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     supplierController.deleteSupplier
   );
   //---------------------------API RECEIPT------------------------------//
   router.post(
     "/api/receipt/create",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     receiptController.createReceipt
   );
   router.get("/api/receipt/get-by-id", receiptController.getReceiptById);
   router.get("/api/receipt", receiptController.getAllReceipt);
   router.put(
     "/api/receipt/update",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     receiptController.updateReceipt
   );
   router.delete(
     "/api/receipt/delete",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     receiptController.deleteReceipt
   );
 
@@ -337,37 +339,37 @@ const webRoutes = (app) => {
   //---------------------------API STATISTIC------------------------------//
   router.get(
     "/api/statistic/count-card",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     statisticController.getCountCardStatistic
   );
   router.get(
     "/api/statistic/count-status-order",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     statisticController.getCountStatusOrder
   );
   router.get(
     "/api/statistic/by-month",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     statisticController.getStatisticByMonth
   );
   router.get(
     "/api/statistic/by-day",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     statisticController.getStatisticByDay
   );
   router.get(
     "/api/statistic/profit",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     statisticController.getStatisticProfit
   );
   router.get(
     "/api/statistic/overturn",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     statisticController.getStatisticOverturn
   );
   router.get(
     "/api/statistic/stock-product",
-    middlewareControllers.verifyTokenAdmin,
+    // middlewareControllers.verifyTokenAdmin,
     statisticController.getStatisticStockProduct
   );
 

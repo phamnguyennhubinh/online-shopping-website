@@ -3,6 +3,7 @@ import connectDB from "./config/connectDB";
 import bodyParser from "body-parser";
 import http from "http";
 import webRoutes from "./route/web";
+import cors from 'cors'
 require("dotenv").config();
 
 const app = express();
@@ -13,6 +14,7 @@ connectDB();
 
 // Use middleware to process JSON data and x-www-form-urlencoded requests
 app.use(bodyParser.json({ limit: "50mb" }));
+app.use(cors());
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 // Initialize routes

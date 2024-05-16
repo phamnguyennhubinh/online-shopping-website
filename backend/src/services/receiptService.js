@@ -40,6 +40,7 @@ const getReceiptById = async (id) => {
     if (!receipt) {
       return notFound(`Receipt ${id} not found`);
     }
+
     const supplier = await db.Supplier.findOne({
       where: { id: receipt.supplierId },
       attributes: ["email", "name"],
@@ -93,6 +94,7 @@ const getReceiptById = async (id) => {
       sizeId: detail.sizeId,
     }));
     const productDetails = await getProductDetails(sizeIds);
+
     const formattedReceipt = {
       id: receipt.id,
       supplier: {
