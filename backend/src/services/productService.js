@@ -42,18 +42,18 @@ function dynamicSortMultiple() {
 }
 function getSizeDetails(size) {
   switch (size.toUpperCase()) {
-      case 'S':
-          return { height: "1m60-1m65", weight: "55kg-60kg" };
-      case 'M':
-          return { height: "1m64-1m69", weight: "60kg-65kg" };
-      case 'L':
-          return { height: "1m70-1m74", weight: "66kg-70kg" };
-      case 'XL':
-          return { height: "1m74-1m76", weight: "70kg-76kg" };
-      case 'XXL':
-          return { height: "1m66-1m77", weight: "76kg-80kg" };
-      default:
-          return null;
+    case "S":
+      return { height: "1m60-1m65", weight: "55kg-60kg" };
+    case "M":
+      return { height: "1m64-1m69", weight: "60kg-65kg" };
+    case "L":
+      return { height: "1m70-1m74", weight: "66kg-70kg" };
+    case "XL":
+      return { height: "1m74-1m76", weight: "70kg-76kg" };
+    case "XXL":
+      return { height: "1m66-1m77", weight: "76kg-80kg" };
+    default:
+      return null;
   }
 }
 // PRODUCT
@@ -64,7 +64,7 @@ const createProduct = async (data) => {
       return missingRequiredParams("Category, Brand are");
     }
     // Create product
-    const arrayColor =  data.color.split(",").map(item => item.trim());
+    const arrayColor = data.color.split(",").map((item) => item.trim());
     const product = await db.Product.create({
       name: data.name,
       content: data.content,
@@ -92,12 +92,12 @@ const createProduct = async (data) => {
         console.error("Error creating product detail:", error);
       }
     }
-    
+
     // Check if product detail creation was successful
     if (!productDetails) {
       return errorResponse(error.message);
     }
-    const arraySize =  data.size.split(",").map(item => item.trim());
+    const arraySize = data.size.split(",").map((item) => item.trim());
     for (const size of arraySize) {
       try {
         const sizeInfo = getSizeDetails(size);
@@ -111,7 +111,7 @@ const createProduct = async (data) => {
         console.error("Error creating product detail:", error);
       }
     }
-    
+
     const imagePaths = await uploadFiles(data.files);
     await saveProductImages(product.id, imagePaths);
 
@@ -182,34 +182,30 @@ const getAllProductAdmin = async (data) => {
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
-    const productsWithDetails = res.rows.reduce((acc, product) => {
-      if (!acc.find((item) => item.id === product.id)) {
-        const productDetail = product.productDetailData;
-        const brand = product.brandData ? product.brandData.value : "";
-        const status = product.statusData ? product.statusData.value : "";
-        let image = "";
-        if (productDetail && productDetail.productImageData) {
-          const firstImage = Array.isArray(productDetail.productImageData)
-            ? productDetail.productImageData[0]
-            : productDetail.productImageData;
-          image = firstImage ? firstImage.image : "";
-        }
-        console.log(product)
-        acc.push({
+    const productsById = {};
+    res.rows.forEach((product) => {
+      const productId = product.id;
+      if (!productsById[productId]) {
+        productsById[productId] = {
           id: product.id,
           name: product.name,
           category: product.categoryData.value,
           view: product.view,
-          brand: brand,
-          status: status,
-          image: image,
-          originalPrice: productDetail.originalPrice || "",
-          discountPrice: productDetail.discountPrice || "",
+          brand: product.brandData ? product.brandData.value : "",
+          status: product.statusData ? product.statusData.value : "",
+          images: [],
+          originalPrice: product.productDetailData.originalPrice || "",
+          discountPrice: product.productDetailData.discountPrice || "",
+        };
+      }
+      if (product.productDetailData.productImageData) {
+        productsById[productId].images.push({
+          id: product.productDetailData.productImageData.id,
+          image: product.productDetailData.productImageData.image,
         });
       }
-      return acc;
-    }, []);
-
+    });
+    const productsWithDetails = Object.values(productsById);
     return {
       result: productsWithDetails,
       statusCode: 200,
@@ -274,30 +270,30 @@ const getAllProductUser = async (data) => {
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
-    const productsWithDetails = res.rows.reduce((acc, product) => {
-      if (!acc.find((item) => item.id === product.id)) {
-        const productDetail = product.productDetailData;
-        const brand = product.brandData ? product.brandData.value : "";
-        let image = "";
-        if (productDetail && productDetail.productImageData) {
-          const firstImage = Array.isArray(productDetail.productImageData)
-            ? productDetail.productImageData[0]
-            : productDetail.productImageData;
-          image = firstImage ? firstImage.image : "";
-        }
-        acc.push({
+    const productsById = {};
+    res.rows.forEach((product) => {
+      const productId = product.id;
+      if (!productsById[productId]) {
+        productsById[productId] = {
           id: product.id,
           name: product.name,
           category: product.categoryData.value,
           view: product.view,
-          brand: brand,
-          image: image,
-          originalPrice: productDetail.originalPrice || "",
-          discountPrice: productDetail.discountPrice || "",
+          brand: product.brandData ? product.brandData.value : "",
+          status: product.statusData ? product.statusData.value : "",
+          images: [],
+          originalPrice: product.productDetailData.originalPrice || "",
+          discountPrice: product.productDetailData.discountPrice || "",
+        };
+      }
+      if (product.productDetailData.productImageData) {
+        productsById[productId].images.push({
+          id: product.productDetailData.productImageData.id,
+          image: product.productDetailData.productImageData.image,
         });
       }
-      return acc;
-    }, []);
+    });
+    const productsWithDetails = Object.values(productsById);
 
     return {
       result: productsWithDetails,
@@ -351,35 +347,37 @@ const getProductById = async (data) => {
       nest: true,
     });
 
-    const colors = await db.sequelize.query(`
+    const colors = await db.sequelize.query(
+      `
     SELECT all_codes.* FROM product_details left join all_codes on product_details.color = all_codes.code where productId = ${data.id}
-    `, { type: db.sequelize.QueryTypes.SELECT });
+    `,
+      { type: db.sequelize.QueryTypes.SELECT }
+    );
 
-    const images = await db.sequelize.query(`
+    const images = await db.sequelize.query(
+      `
     SELECT image FROM product_images where productDetailId = ${data.id}
-  `, { type: db.sequelize.QueryTypes.SELECT });
-    
-    const sizes = await db.sequelize.query(`
+  `,
+      { type: db.sequelize.QueryTypes.SELECT }
+    );
+
+    const sizes = await db.sequelize.query(
+      `
     SELECT * FROM product_sizes where productDetailId = ${data.id}
-  `, { type: db.sequelize.QueryTypes.SELECT });
+  `,
+      { type: db.sequelize.QueryTypes.SELECT }
+    );
     // If no product details found, return error
     if (!productDetails.rows.length) {
       return notFound("Product details");
     }
-    
+
     // Extract common properties from the first product detail
     const firstProductDetail = productDetails.rows[0];
     const {
       originalPrice,
       discountPrice,
-      productData: {
-        name,
-        content,
-        view,
-        brandData,
-        categoryData,
-        statusId
-      },
+      productData: { name, content, view, brandData, categoryData, statusId },
     } = firstProductDetail;
 
     // Iterate through each product detail
@@ -397,37 +395,36 @@ const getProductById = async (data) => {
       }
     });
 
-    
     const imagesBase64 = [];
     try {
       for (const img of images) {
-        const imagePath = path.join(__dirname, '../..', 'uploads', img.image);
+        const imagePath = path.join(__dirname, "../..", "uploads", img.image);
         await fs.stat(imagePath);
         const data = await fs.readFile(imagePath);
-        const imageData = data.toString('base64');
+        const imageData = data.toString("base64");
         const imageBase64 = `data:image/jpeg;base64,${imageData}`;
         imagesBase64.push({
-          image: imageBase64
-        })
+          image: imageBase64,
+        });
       }
     } catch (error) {
       return errorResponse(error.message);
     }
     return {
       result: {
-          id,
-          name,
-          content,
-          view,
-          originalPrice,
-          discountPrice,
-          brand: brandData,
-          category: categoryData,
-          images: imagesBase64,
-          statusId,
-          sizes,
-          colors,
-        },
+        id,
+        name,
+        content,
+        view,
+        originalPrice,
+        discountPrice,
+        brand: brandData,
+        category: categoryData,
+        images: imagesBase64,
+        statusId,
+        sizes,
+        colors,
+      },
       statusCode: 200,
       errors: ["Get all product details successfully!"],
     };
@@ -539,7 +536,7 @@ const updateProduct = async (data) => {
       });
     }
     const arraySize = data.size.split(/[,]/);
-    console.log(arraySize)
+    console.log(arraySize);
     for (const size of arraySize) {
       try {
         const sizeInfo = getSizeDetails(size);
@@ -740,36 +737,6 @@ const deleteProductDetail = async (data) => {
 
 // PRODUCT IMAGE
 
-// const uploadFiles = async (files) => {
-//   const uploadDirectory = "./uploads";
-
-//   try {
-//     await fs.access(uploadDirectory);
-//   } catch (error) {
-//     await fs.mkdir(uploadDirectory);
-//   }
-
-//   const fileUploadPromises = files.map(async (file) => {
-//     const fileExtension = path.extname(file.originalname);
-//     const fileName = `${Date.now()}${fileExtension}`;
-//     const filePath = path.join(uploadDirectory, fileName);
-
-//     await fs.rename(file.path, filePath);
-//     return fileName;
-//   });
-
-//   return Promise.all(fileUploadPromises);
-// };
-
-// const saveProductImages = async (productDetailId, imagePaths) => {
-//   const imageRecords = imagePaths.map((imagePath) => ({
-//     productDetailId,
-//     image: imagePath,
-//   }));
-
-//   await db.ProductImage.bulkCreate(imageRecords);
-// };
-
 const uploadFiles = async (files) => {
   const uploadDirectory = "./uploads";
 
@@ -780,7 +747,7 @@ const uploadFiles = async (files) => {
   }
 
   const fileUploadPromises = files.map(async (file) => {
-    const now = new Date()
+    const now = new Date();
     const fileName = `${now.getTime()}_${file.originalname}`;
     const filePath = path.join(uploadDirectory, fileName);
 
