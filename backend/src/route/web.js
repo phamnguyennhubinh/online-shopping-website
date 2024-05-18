@@ -21,7 +21,7 @@ const webRoutes = (app) => {
   router.post("/api/user/login", userController.loginUser);
   router.put(
     "/api/user/update",
-    // middlewareControllers.verifyTokenUser,
+    middlewareControllers.verifyTokenUser,
     userController.updateUser
   );
   router.delete(
@@ -37,7 +37,7 @@ const webRoutes = (app) => {
   router.get("/api/user/get-by-id", userController.getUserById);
   router.post(
     "/api/user/change-password",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     userController.changePassword
   );
 
@@ -222,7 +222,7 @@ const webRoutes = (app) => {
   );
   router.post(
     "/api/voucher/user-save",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     voucherController.saveUserVoucher
   );
   router.get(
@@ -279,45 +279,45 @@ const webRoutes = (app) => {
   //---------------------------API ADDRESS-USER------------------------------//
   router.post(
     "/api/address-user/create",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     addressUserController.createAddressUser
   );
   router.get(
     "/api/address-user",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     addressUserController.getAllAddressUser
   );
   router.delete(
     "/api/address-user/delete",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     addressUserController.deleteAddressUser
   );
   router.put(
     "/api/address-user/edit",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     addressUserController.editAddressUser
   );
   router.get(
     "/api/address-user/get-by-id",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     addressUserController.getAddressUserById
   );
   //---------------------------API ORDER------------------------------//
   router.post(
     "/api/order/create",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     orderController.createOrder
   );
   router.get("/api/order", orderController.getAllOrders);
   router.get("/api/order/get-by-id", orderController.getOrderById);
   router.put(
     "/api/order/update-status",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     orderController.updateStatusOrder
   );
   router.get(
     "/api/order/get-all-by-user",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     orderController.getAllOrdersByUser
   );
   router.get(
@@ -326,13 +326,13 @@ const webRoutes = (app) => {
   );
   router.post(
     "/api/order/payment-vnpay",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     orderController.paymentOrderVNPay
   );
   router.post("/api/order/vnpay-return", orderController.confirmOrderVNPay);
   router.post(
     "/api/order/payment-vnpay-success",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     orderController.paymentOrderVNPaySuccess
   );
   router.put("/api/order/confirm", orderController.confirmOrder);

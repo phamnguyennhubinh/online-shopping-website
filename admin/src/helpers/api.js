@@ -6,8 +6,8 @@ export const UPDATE_PRODUCT_BY_ID = '/product/update';
 export const CREATE_PRODUCT = '/product/create'
 
 // orders
-export const GET_ALL_ORDER = '/orders';
-export const GET_ORDER_BY_ID = (id) => `/order/${id}`;
+export const GET_ALL_ORDER = '/order';
+export const GET_ORDER_BY_ID = (id) => `/order/get-by-id?id=${id}`;
 export const DELETE_ORDER_BY_ID = (id) => `/order/delete/${id}`;
 export const UPDATE_ORDER_BY_ID = (id) => `/order/update/${id}`;
 export const CREATE_ORDER = '/orders/add'
@@ -20,7 +20,7 @@ export const UPDATE_USER_BY_ID = (id) => `/user/update/${id}`;
 
 // accounts
 export const LOGIN = '/user/login'
-export const REGISTER = '/register'
+export const REGISTER = '/user/register'
 
 // customers
 export const GET_ALL_CUSTOMERS = '/customers'

@@ -3,18 +3,43 @@
   <div class="wp">
     <div class="total">
       <span class="title">Total orders</span>
-      <span>45</span>
+      <span>{{ totalOrders }}</span>
     </div>
     <div class="total">
-      <span class="title">Customers</span>
-      <span>45</span>
+      <span class="title">Orders Pending</span>
+      <span>{{ totalOrdersPending }}</span>
     </div>
     <div class="total">
-      <span class="title">Gross product</span>
-      <span>45</span>
+      <span class="title">Total orders delivered</span>
+      <span>{{ totalOrdersDelivered }}</span>
+    </div>
+    <div class="total">
+      <span class="title">Total orders canceled</span>
+      <span>{{ totalOrdersCancel }}</span>
     </div>
   </div>
 </template>
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useOrders } from '@/stores/orders';
+
+const { getAllOrders } = useOrders();
+const totalOrders = ref(0);
+const totalOrdersPending = ref(0);
+const totalOrdersDelivered = ref(0);
+const totalOrdersCancel = ref(0);
+
+onMounted(async() => {
+  const res = await getAllOrders();
+  const s1 = res.filter(item => item.statusOrder === 'S1').length;
+  const s2 = res.filter(item => item.statusOrder === 'S2').length;
+  const s3 = res.filter(item => item.statusOrder === 'S3').length ;
+  totalOrders.value = res.length;
+  totalOrdersPending.value = s1;
+  totalOrdersDelivered.value = s2;
+  totalOrdersCancel.value = s3;
+})
+</script>
 <style lang="scss" scoped>
 .wp {
   display: flex;

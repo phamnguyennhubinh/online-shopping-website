@@ -32,31 +32,26 @@ const LIST_MENU = [
     key: "1",
     path: "/home",
     name: "Tổng quan",
-    icon: PieChartOutlined
   },
   {
     key: "2",
     path: "/products",
     name: "Sản Phẩm",
-    icon: DesktopOutlined
   },
   {
     key: "3",
     path: "/orders",
     name: "Đơn Hàng",
-    icon: DesktopOutlined
   },
-  {
-    key: "4",
-    path: "/customers",
-    name: "Khách Hàng",
-    icon: DesktopOutlined
-  },
+  // {
+  //   key: "4",
+  //   path: "/customers",
+  //   name: "Khách Hàng",
+  // },
   {
     key: "5",
     path: "/settings",
     name: "Cài Đặt",
-    icon: DesktopOutlined
   }
 ]
 </script>

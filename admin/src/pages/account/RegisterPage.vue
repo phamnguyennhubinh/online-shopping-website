@@ -1,29 +1,32 @@
 <template>
-  <a-form :model="formState" 
-          name="basic" 
-          autocomplete="off" 
-          @finish="onFinish" 
-          @finishFailed="onFinishFailed"
-          class="login-form">
+  <a-form :model="formState" name="basic" autocomplete="off" @finish="onFinish" @finishFailed="onFinishFailed"
+    class="login-form">
     <h2 class="text-secondary text-center mb-4">Register</h2>
-    <a-form-item label="Username"
-                 name="username" 
-                 :rules="[{ 
-                  required: true, 
-                  message: 'Please input your username!' }]">
-      <a-input v-model:value="formState.username" />
+    <a-form-item label="PhoneNumber" name="phoneNumber" :rules="[{
+      required: true,
+      message: 'Please input your phone number!'
+    }]">
+        <a-input v-model:value="formState.phoneNumber" />
+      </a-form-item>
+      <a-form-item label="Email" name="email" :rules="[{
+        required: true,
+        message: 'Please input your email!'
+      }]">
+          <a-input v-model:value="formState.email" />
+        </a-form-item>
+    <a-form-item label="Full Name" name="fullName" :rules="[{
+    required: true,
+    message: 'Please input your Full Name!'
+  }]">
+      <a-input v-model:value="formState.fullName" />
     </a-form-item>
-    <a-form-item label="Password" 
-                 name="password" 
-                 :rules="[{ 
-                  required: true, 
-                  message: 'Please input your password!'
-                }]">
+    <a-form-item label="Password" name="password" :rules="[{
+    required: true,
+    message: 'Please input your password!'
+  }]">
       <a-input-password v-model:value="formState.password" />
     </a-form-item>
-    <a-form-item  label="Confirm password" 
-                  name="confirmPassword" 
-                  :rules="[{ validator: validatePass}]">
+    <a-form-item label="Confirm password" name="confirmPassword" :rules="[{ validator: validatePass }]">
       <a-input-password v-model:value="formState.confirmPassword" />
     </a-form-item>
     <a-form-item class="action">
@@ -37,12 +40,15 @@
 <script setup>
 import { reactive } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import router from '@/router';
 const auth = useAuthStore();
 
 const formState = reactive({
-  username: '',
+  email: '',
+  fullName: '',
   password: '',
   confirmPassword: '',
+  phoneNumber: ''
 });
 
 let validatePass = async (rule, value) => {
@@ -57,7 +63,7 @@ let validatePass = async (rule, value) => {
 
 const register = () => {
   auth.register(formState, () => {
-    // call success
+    router.push('/login');
   })
 }
 
@@ -75,6 +81,7 @@ const onFinishFailed = errorInfo => {
   padding: 20px;
   border-radius: 12px;
   background-color: #F2F4F5;
+
   .ant-form-item-label {
     min-width: 130px;
     text-align: left;

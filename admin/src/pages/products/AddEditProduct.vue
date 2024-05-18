@@ -39,10 +39,15 @@
         </a-form-item>
       </a-col>
       <a-col :span="12">
+        <a-form-item ref="quantity" label="Quantity" name="quantity">
+          <a-input v-model:value="formState.quantity" />
+        </a-form-item>
+      </a-col>
+      <a-col :span="12">
         <a-form-item label="Status" name="statusId">
           <a-radio-group v-model:value="formState.statusId">
-            <a-radio value="S1">Off</a-radio>
-            <a-radio value="S2">On</a-radio>
+            <a-radio value="S2">Off</a-radio>
+            <a-radio value="S1">On</a-radio>
           </a-radio-group>
         </a-form-item>
       </a-col>
@@ -126,7 +131,8 @@ const formState = reactive({
   originalPrice: dataSource?.originalPrice ?? '',
   discountPrice: dataSource?.discountPrice ?? '',
   size: dataSource?.sizes?.map(item => item.sizeId) ?? [],
-  fileListProduct: Utils.addBase64Files(dataSource.images)
+  fileListProduct: Utils.addBase64Files(dataSource.images),
+  quantity: 10,
 });
 const rules = {
   name: [

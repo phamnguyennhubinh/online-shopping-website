@@ -18,10 +18,11 @@ const createOrder = async (data) => {
       !data.typeShipId ||
       !data.userId ||
       !data.arrDataShopCart ||
+      !data.shipAddress ||
       data.arrDataShopCart.length === 0
     ) {
       return missingRequiredParams(
-        "addressUserId, typeShipId, userId, and arrDataShopCart"
+        "addressUserId, typeShipId, userId, shipAddress, and arrDataShopCart"
       );
     }
 
@@ -32,6 +33,14 @@ const createOrder = async (data) => {
       statusId: "S3", // Chờ xác nhận
       typeShipId: data.typeShipId,
       note: data.note || "",
+    });
+
+    await db.AddressUser.create({
+      userId: data.userId,
+      shipName: data.userId,
+      shipAddress: data.shipAddress,
+      shipEmail: data.shipEmail,
+      shipPhoneNumber: data.shipPhoneNumber,
     });
 
     // Thêm chi tiết đơn hàng từ shop cart
@@ -168,8 +177,9 @@ const getAllOrders = async (data) => {
 
     // Fetch product details for the order details
     let productIds = orderDetails.map((detail) => detail.productId);
+    
     let productDetails = await db.ProductDetail.findAll({
-      where: { id: productIds },
+      where: { productId: productIds },
       include: [{ model: db.Product, as: "productData", raw: true }],
       raw: true,
       nest: true,
@@ -184,8 +194,7 @@ const getAllOrders = async (data) => {
     // Formatting code...
     const formattedRows = rows.map((order) => {
       const addressUser = addressUserMap[order.addressUserId] || {};
-      const statusOrder =
-        (order.statusOrderData && order.statusOrderData.value) || "";
+      const statusOrder = order.statusId;
       const typeShip = order.typeShipData || {};
 
       const orderDetailData = orderDetails.filter(
@@ -193,17 +202,18 @@ const getAllOrders = async (data) => {
       );
       const products = orderDetailData.map((detail) => {
         const productDetail = productDetails.find(
-          (product) => product.id === detail.productId
+          (product) => product.productId === detail.productId
         );
-        const product = productDetail.productData || {};
+        const product = productDetail?.productData || {};
 
         const quantity = detail.quantity || 0;
         const realPrice = detail.realPrice || 0;
         return {
           productName: product.name || "",
           quantity,
+          productId: productDetail.productId,
           priceProduct: realPrice,
-          color: productDetail.color || "",
+          color: productDetail?.color || "",
         };
       });
 
@@ -253,6 +263,7 @@ const getAllOrders = async (data) => {
 };
 
 const getOrderById = async (data) => {
+  
   try {
     if (!data.id) {
       return missingRequiredParams("id");
@@ -267,7 +278,7 @@ const getOrderById = async (data) => {
       raw: true,
       nest: true,
     });
-
+    
     if (!order) {
       return notFound(`Order with id ${data.id}`);
     }
@@ -341,7 +352,6 @@ const updateStatusOrder = async (data) => {
     if (updatedRowsCount === 0) {
       return notFound(`Order with id ${id}`);
     }
-    console.log("Updated rows:", updatedRows);
     if (
       statusId === "S7" && //S7: hủy đơn
       dataOrder &&
@@ -433,15 +443,12 @@ const paymentOrderVNPay = async (req) => {
       req.connection.remoteAddress ||
       req.socket.remoteAddress ||
       req.connection.socket.remoteAddress;
-    console.log("vnp_IpAddr", ipAddr);
     var tmnCode = process.env.VNP_TMNCODE;
     var secretKey = process.env.VNP_HASHSECRET;
     var vnpUrl = process.env.VNP_URL;
     var returnUrl = process.env.VNP_RETURNURL;
     var createDate = process.env.DATE_VNPAYMENT;
     var orderId = uuidv4();
-    console.log("createDate", createDate);
-    console.log("orderId", orderId);
     var amount = req.body.amount;
     var bankCode = req.body.bankCode;
     var orderInfo = req.body.orderDescription;
@@ -472,10 +479,8 @@ const paymentOrderVNPay = async (req) => {
     var signData = querystring.stringify(vnp_Params, { encode: false });
     var hmac = crypto.createHmac("sha512", secretKey);
     var signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-    console.log("vnp_SecureHash", signed);
     vnp_Params["vnp_SecureHash"] = signed;
     vnpUrl += "?" + querystring.stringify(vnp_Params, { encode: false });
-    console.log(vnpUrl);
     return {
       result: [vnpUrl],
       statusCode: 200,

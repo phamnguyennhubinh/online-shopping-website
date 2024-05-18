@@ -1,51 +1,79 @@
 <template>
-    <div>
-      <div class="text-end">
-        <a-button type="primary" style="margin-right: 10px" @click="isShowForm">{{ isEdit ? 'Cancel' : 'Edit'
-          }}</a-button>
-        <a-button type="primary" danger @click="handleDelete">Delete</a-button>
-      </div>
-      <template v-if="!isEdit">
-        <a-descriptions title="Customer Detail" :size="size">
-          <a-descriptions-item label="Product">{{ dataSource.name }}</a-descriptions-item>
-          <a-descriptions-item label="Branch">{{ dataSource.address }}</a-descriptions-item>
-          <a-descriptions-item label="Color">{{ dataSource.phone }}</a-descriptions-item>
-        </a-descriptions>
-      </template>
-      <AddEditOrder :isEdit="isEdit" :dataSource="dataSource" v-else />
+  <div>
+    <Breadcrumb :listBreadcrumb="listBreadcrumb" class="mb-4" />
+    <div class="text-end">
+      <a-select class="text-start" v-model:value="value" value="S1" placeholder="Select status" style="width: 200px" :options="options"
+        @change="handleChange"></a-select>
     </div>
-  </template>
-  <script setup>
-  import { ref, onMounted } from 'vue'
-  import AddEditOrder from '@/pages/orders/AddEditOrder.vue'
-  import { useOrders } from '@/stores/orders';
-  
-  const { deleteCustomer, getCustomerById, customer } = useOrders();
-  
-  const dataSource = {
-    id: 1,
-    name: "product",
-    address: 'branch',
-    phone: 123123123,
+    <a-descriptions title="Customer Detail">
+      <a-descriptions-item label="Note">{{ order?.note }}</a-descriptions-item>
+      <a-descriptions-item label="Address">{{ order?.addressUser?.shipAddress }}</a-descriptions-item>
+      <a-descriptions-item label="Email">{{ order?.addressUser?.shipEmail }}</a-descriptions-item>
+      <a-descriptions-item label="Phone Number">{{ order?.addressUser?.shipPhoneNumber }}</a-descriptions-item>
+      <a-descriptions-item label="Type Ship">{{ order?.addressUser?.typeShip }}</a-descriptions-item>
+    </a-descriptions>
+    <br>
+    <div class="ant-descriptions-title mb-2">Sản phẩm:</div>
+    <div v-for="product in order?.products">
+      <a-descriptions>
+        <a-descriptions-item label="Produc Name">{{ product?.productName }}</a-descriptions-item>
+        <a-descriptions-item label="Price">{{ Utils.formatVndCurrency(product?.priceProduct) }}</a-descriptions-item>
+        <a-descriptions-item label="Quantity">{{ product?.quantity }}</a-descriptions-item>
+      </a-descriptions>
+    </div>
+    <div>
+      Total Price: <strong>{{ Utils.formatVndCurrency(order?.totalPrice ?? 0) }}</strong>
+    </div>
+  </div>
+</template>
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useOrders } from '@/stores/orders';
+import Utils from '@/helpers/utils'
+import Breadcrumb from '@/components/Breadcrumb.vue'
+import { useRoute } from 'vue-router'
+
+const { getOrdersById, updateOrder } = useOrders();
+const route = useRoute()
+const id = route.params.id;
+const order = ref({});
+const listBreadcrumb = [
+  {
+    name: 'Order',
+    link: '/orders'
+  },
+  {
+    name: 'Order Detail',
   }
-  
-  const isEdit = ref(false);
-  const currentCustomer = ref({});
-  
-  onMounted(async () => {
-    await getCustomerById(1);
-    if (customer) {
-      currentCustomer.value = customer;
-    }
-  });
-  
-  const handleDelete = () => {
-    deleteCustomer(dataSource.id, '/', () => {
-      // call success
-    })
+]
+const options = ref([
+  {
+    value: 'S1',
+    label: 'Đang chờ xác nhận',
+  },
+  {
+    value: 'S2',
+    label: 'Đã giao hàng',
+  },
+  {
+    value: 'S3',
+    label: 'Huỷ đơn hàng',
   }
-  
-  const isShowForm = () => {
-    isEdit.value = !isEdit.value
-  }
-  </script>
+]);
+const handleChange = async (value) => {
+  await updateOrder({
+    id: id,
+    statusId: value
+  })
+  await fetchOrdersById()
+};
+const value = ref("S1");
+const fetchOrdersById = async () => {
+  const res = await getOrdersById(id);
+  order.value = res;
+  value.value = res.statusId
+}
+onMounted(async () => {
+  await fetchOrdersById();
+});
+</script>

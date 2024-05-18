@@ -98,6 +98,7 @@ const createProduct = async (data) => {
       return errorResponse(error.message);
     }
     const arraySize =  data.size.split(",").map(item => item.trim());
+    const { userId, supplierId, sizeId, quantity, price } = data;
     for (const size of arraySize) {
       try {
         const sizeInfo = getSizeDetails(size);
@@ -107,6 +108,16 @@ const createProduct = async (data) => {
           weight: sizeInfo.weight,
           sizeId: size,
         });
+
+        const receipt = await db.Receipt.create({ userId, supplierId });
+        if (receipt) {
+          await db.ReceiptDetail.create({
+            receiptId: receipt.id,
+            sizeId,
+            quantity,
+            price,
+          });
+        }
       } catch (error) {
         console.error("Error creating product detail:", error);
       }

@@ -1,128 +1,107 @@
 <template>
   <div>
+    <Breadcrumb :listBreadcrumb="listBreadcrumb" class="mb-4"/>
     <a-flex justify="space-between" align="center" class="mb-2">
       <h3>List Orders</h3>
-      <router-link :to="`/product/add`">
-        <a-button type="primary">Add New Product</a-button>
-      </router-link>
     </a-flex>
-    <a-flex gap="middle" class="mb-2">
+    <!-- <a-flex gap="middle" class="mb-2">
       <a-input v-model:value="inputSearchName" @change="handleChangeInputSearch" placeholder="Search product name ..."
         style="width: 200px;" />
-    </a-flex>
-    <a-table :columns="columns" :data-source="filteredProductList" :scroll="{ x: '100%', y: 600 }">
+    </a-flex> -->
+    <a-table :loading="!dataLoaded" :columns="columns" :data-source="filteredOrdersList"
+      :scroll="{ x: '100%', y: 300 }">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'operation'">
-          <router-link :to="`/product/${record.key}`">
+          <router-link :to="`/order/${record.id}`">
             <EyeOutlined class="mr-2 cursor-pointer" />
           </router-link>
-          <a-popconfirm title="Are you sure delete this task?" ok-text="Yes" cancel-text="No">
-            <DeleteOutlined class="cursor-pointer ml-2" />
-          </a-popconfirm>
         </template>
-        <template v-else-if="column.key === 'status'">
-          <span>
-            {{ record.status ? "On" : "Off" }}
-          </span>
+        <template v-else-if="column.key === 'createdAt'">
+          {{ dayjs(record.createdAt).format('DD/MM/YYYY')}}
+        </template>
+        <template v-else-if="column.key === 'statusOrder'">
+          <span v-if="record.statusOrder === 'S1'" class="bg-wn status-order ant-alert-message">Pending</span>
+          <span v-if="record.statusOrder === 'S2'" class="bg-success status-order ant-alert-message">Done</span>
+          <span v-if="record.statusOrder === 'S3'" class="bg-danger status-order ant-alert-message">Cancel</span>
         </template>
       </template>
     </a-table>
   </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
-  EyeOutlined,
-  DeleteOutlined
+  EyeOutlined
 } from '@ant-design/icons-vue'
+import Breadcrumb from '@/components/Breadcrumb.vue'
+import { useOrders } from '@/stores/orders';
+import dayjs from 'dayjs';
 
-const getRandomElementLimited = (array, maxLength) => {
-  const randomIndex = Math.floor(Math.random() * array.length);
-  let selectedWord = array[randomIndex];
+const { getAllOrders } = useOrders();
 
-  if (selectedWord.length > maxLength) {
-    selectedWord = selectedWord.substring(0, maxLength) + '...';
+const listBreadcrumb = [
+  {
+    name: 'List Orders'
   }
-
-  return selectedWord;
-}
-
-const LIST_DESCRIPTION_RANDOM = [
-  "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Explicabo ad aut odit ipsum incidunt quisquam!",
-  "Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam blanditiis sit voluptates fugit, cupiditate officiis.",
-  "Lorem ipsum dolor sit amet consectetur adipisicing elit. Eveniet ut, ea animi culpa exercitationem quibusdam.",
-  "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Voluptas aut animi, earum sapiente suscipit quibusdam!",
-  "Lorem ipsum dolor sit amet consectetur adipisicing elit. Eaque asperiores repellat modi perspiciatis cum necessitatibus."
 ]
-
-const mockupData = () => {
-  const data = [];
-  for (let i = 0; i < 100; i++) {
-    data.push({
-      key: i + 1,
-      name: `Sản phẩm ${i + 1}`,
-      price: (i + 1) + 10000,
-      priceDiscount: (i + 1) + 9000,
-      color: 'Tím',
-      status: false,
-      branch: 'branch 1',
-      description: getRandomElementLimited(LIST_DESCRIPTION_RANDOM, 100),
-    })
-  }
-  return data;
-}
-
-const data = mockupData();
-const listProducts = ref(data);
+const orders = ref([]);
 const inputSearchName = ref('');
-
-const filteredProductList = computed(() => {
-  let filteredList = mockupData();
-  if (inputSearchName.value) {
-    const searchQuery = inputSearchName.value.toLowerCase()
-    filteredList = filteredList.filter(task => task.name?.toLowerCase().includes(searchQuery))
-  }
-  // if (selectedStatus.value) {
-  //   filteredList = filteredList.filter(task => task.status === selectedStatus.value)
-  // }
-  return filteredList
-})
+const dataLoaded = ref(false);
 
 const handleChangeInputSearch = (event) => {
   inputSearchName.value = event.target.value
 }
 
 const columns = [
-  { title: 'No', dataIndex: 'key', key: 'key' },
-  { title: 'Name', dataIndex: 'name', key: 'name' },
-  { title: 'Price', dataIndex: 'price', key: 'price', sorter: (a, b) => a.price - b.price, },
+  { title: 'No', dataIndex: 'id', key: 'id' },
+  { title: 'Price', dataIndex: 'totalPrice', key: 'totalPrice', sorter: (a, b) => a.price - b.price, },
   {
-    title: 'Price Discount',
-    dataIndex: 'priceDiscount',
-    key: 'priceDiscount',
-    sorter: (a, b) => a.priceDiscount - b.priceDiscount,
+    title: 'CreatedAt',
+    dataIndex: 'createdAt',
+    key: 'createdAt'
   },
   {
-    title: 'Color',
-    dataIndex: 'color',
-    key: 'color',
-  },
-  {
-    title: 'Branch',
-    dataIndex: 'branch',
-    key: 'branch',
-  },
-  {
-    title: 'Status',
-    dataIndex: 'status',
-    key: 'status',
-  },
-  {
-    title: 'Description',
-    dataIndex: 'description',
-    key: 'description',
-    width: '30%'
+    title: 'Status Order',
+    dataIndex: 'statusOrder',
+    key: 'statusOrder',
   },
   { title: 'Action', key: 'operation' },
 ];
+
+const fetchOrders = async () => {
+  dataLoaded.value = false;
+  const productsData = await getAllOrders();
+  dataLoaded.value = true;
+  orders.value = productsData;
+}
+
+onMounted(async () => {
+  await fetchOrders();
+});
+
+const filteredOrdersList = computed(() => {
+  let filteredList = orders.value;
+  if (inputSearchName.value) {
+    const searchQuery = inputSearchName.value.toLowerCase()
+    filteredList = filteredList.filter(item => item.name?.toLowerCase().includes(searchQuery))
+  }
+  return filteredList
+})
 </script>
+<style>
+.status-order {
+  padding: 3px 15px;
+  border-radius: 4px;
+}
+.bg-wn {
+  background-color: #ffc107;
+  color: white;
+}
+.bg-success {
+  background-color: #1e7e34;
+}
+.bg-danger {
+  background-color: #bd2130;
+  color: white;
+}
+</style>

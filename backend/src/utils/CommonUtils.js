@@ -7,6 +7,6 @@ let encodeToken = (userId) => {
         sub: userId,
         iat: new Date().getTime(),
         exp: new Date().setDate(new Date().getDate() + 3)
-    }, process.env.JWT_SECRET)
+    }, 'JWT_SECRE')
 }
 module.exports = { encodeToken }
