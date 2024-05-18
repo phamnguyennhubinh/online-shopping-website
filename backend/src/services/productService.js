@@ -40,7 +40,22 @@ function dynamicSortMultiple() {
     return result;
   };
 }
-
+function getSizeDetails(size) {
+  switch (size.toUpperCase()) {
+      case 'S':
+          return { height: "1m60-1m65", weight: "55kg-60kg" };
+      case 'M':
+          return { height: "1m64-1m69", weight: "60kg-65kg" };
+      case 'L':
+          return { height: "1m70-1m74", weight: "66kg-70kg" };
+      case 'XL':
+          return { height: "1m74-1m76", weight: "70kg-76kg" };
+      case 'XXL':
+          return { height: "1m66-1m77", weight: "76kg-80kg" };
+      default:
+          return null;
+  }
+}
 // PRODUCT
 const createProduct = async (data) => {
   try {
@@ -82,14 +97,15 @@ const createProduct = async (data) => {
     if (!productDetails) {
       return errorResponse(error.message);
     }
-    
-    for (const productDetail of productDetails) {
+    const arraySize =  data.size.split(",").map(item => item.trim());
+    for (const size of arraySize) {
       try {
+        const sizeInfo = getSizeDetails(size);
         await db.ProductSize.create({
-          productDetailId: productDetail.id,
-          height: data.height,
-          weight: data.weight,
-          sizeId: data.sizeId,
+          productDetailId: product.id,
+          height: sizeInfo.height,
+          weight: sizeInfo.weight,
+          sizeId: size,
         });
       } catch (error) {
         console.error("Error creating product detail:", error);
@@ -178,6 +194,7 @@ const getAllProductAdmin = async (data) => {
             : productDetail.productImageData;
           image = firstImage ? firstImage.image : "";
         }
+        console.log(product)
         acc.push({
           id: product.id,
           name: product.name,
@@ -498,7 +515,6 @@ const updateProduct = async (data) => {
       });
     }
     const arrayColor = data.color.split(/[,]/);
-    console.log(arrayColor)
     for (const color of arrayColor) {
       try {
         await db.ProductDetail.create({
@@ -513,16 +529,30 @@ const updateProduct = async (data) => {
       }
     }
 
-    // Update product sizes
-    await db.ProductSize.upsert(
-      {
-        productId: data.productId,
-        height: data.height,
-        weight: data.weight,
-        sizeId: data.sizeId,
-      },
-      { where: { productId: data.productId } }
-    );
+    let productSize = await db.ProductSize.findAll({
+      where: { productDetailId: data.productId },
+    });
+
+    if (productSize.length > 0) {
+      await db.ProductSize.destroy({
+        where: { productDetailId: data.productId },
+      });
+    }
+    const arraySize = data.size.split(/[,]/);
+    console.log(arraySize)
+    for (const size of arraySize) {
+      try {
+        const sizeInfo = getSizeDetails(size);
+        await db.ProductSize.create({
+          productDetailId: data.productId,
+          height: sizeInfo.height,
+          weight: sizeInfo.weight,
+          sizeId: size,
+        });
+      } catch (error) {
+        console.error("Error creating product detail:", error);
+      }
+    }
 
     // Upload and save new product images if files are provided
     if (data.files) {
@@ -568,8 +598,7 @@ const deleteProduct = async (productId) => {
         transaction,
       });
       await db.ProductSize.destroy({
-        where: { productDetailId: productDetailIds },
-        transaction,
+        where: { productDetailId: productId },
       });
       await db.ProductDetail.destroy({ where: { productId }, transaction });
       await db.Product.destroy({ where: { id: productId }, transaction });

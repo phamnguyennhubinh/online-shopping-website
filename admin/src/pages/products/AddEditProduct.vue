@@ -22,6 +22,13 @@
         </a-form-item>
       </a-col>
       <a-col :span="12">
+        <a-form-item label="Size" name="size">
+          <a-select v-model:value="formState.size" mode="multiple" placeholder="please select your zone">
+            <a-select-option :value="size.code" v-for="size in listSize">{{ size.value }}</a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-col>
+      <a-col :span="12">
         <a-form-item ref="price" label="Price" name="price">
           <a-input v-model:value="formState.originalPrice" />
         </a-form-item>
@@ -69,6 +76,7 @@ import { useProducts } from '@/stores/products';
 import { useSettings } from '@/stores/settings';
 import router from '@/router';
 import { useRoute } from 'vue-router'
+import Utils from '@/helpers/utils'
 
 const emit = defineEmits({
   updateForm: 'updated'
@@ -88,32 +96,37 @@ const props = defineProps({
 })
 
 const { updateProduct, createProduct } = useProducts();
-const { getListBrand, getListColor } = useSettings();
+const { getListBrand, getListColor, getListSize } = useSettings();
 const { dataSource, isEdit } = props
 const formRef = ref();
 const listColor = ref([]);
 const listBrand = ref([]);
+const listSize = ref([]);
 
 const fetchSettings = async () => {
   const resBrand = await getListBrand();
   listBrand.value = resBrand
   const resColor = await getListColor();
   listColor.value = resColor
+  const resSize = await getListSize();
+  listSize.value = resSize
+  console.log(listSize.value)
 }
-console.log(dataSource)
+
 const id = route.params.id;
 const formState = reactive({
   id: id,
-  name: dataSource.name ?? '',
-  brand: dataSource.brand.code ?? '',
-  statusId: dataSource.statusId ?? '',
-  content: dataSource.content ?? '',
-  color: dataSource.colors.map(item => item.code) ?? [],
-  categoryId: 'ao-thun',
-  statusId: 'S2',
-  originalPrice: dataSource.originalPrice ?? '',
-  discountPrice: dataSource.discountPrice ?? '',
-  fileListProduct: []
+  name: dataSource?.name ?? '',
+  brand: dataSource?.brand?.code ?? '',
+  statusId: dataSource?.statusId ?? '',
+  content: dataSource?.content ?? '',
+  color: dataSource?.colors?.map(item => item.code) ?? [],
+  categoryId: dataSource?.category?.code,
+  statusId: dataSource?.statusId,
+  originalPrice: dataSource?.originalPrice ?? '',
+  discountPrice: dataSource?.discountPrice ?? '',
+  size: dataSource?.sizes?.map(item => item.sizeId) ?? [],
+  fileListProduct: Utils.addBase64Files(dataSource.images)
 });
 const rules = {
   name: [
@@ -165,7 +178,7 @@ const onSubmit = async (mode) => {
     let res;
     const formData = new FormData();
     formState.brandId = formState.brand;
-    formState.productId = dataSource.id
+    formState.productId = dataSource.id;
     for (const key in formState) {
       if (key !== 'fileListProduct') {
         formData.append(key, formState[key]);

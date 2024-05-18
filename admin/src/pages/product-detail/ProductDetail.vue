@@ -10,10 +10,13 @@
       <a-descriptions-item label="Product">{{ product.name ?? '-' }}</a-descriptions-item>
       <a-descriptions-item label="Price">{{ Utils.formatVndCurrency(product.originalPrice ?? '-') }}</a-descriptions-item>
       <a-descriptions-item label="Price Discount">{{ Utils.formatVndCurrency(product.discountPrice ?? '-') }}</a-descriptions-item>
-      <a-descriptions-item label="Status">{{ product?.statusId === 'S1' ? 'On' : 'Off'}}</a-descriptions-item>
+      <a-descriptions-item label="Status">{{ product?.statusId === 'S1' ? 'Off' : 'On'}}</a-descriptions-item>
       <a-descriptions-item label="Brand">{{ product?.brand?.value ?? '-'}}</a-descriptions-item>
       <a-descriptions-item label="Color">
         <span v-for="color in product?.colors" class="color">{{color.value}}</span>
+      </a-descriptions-item>
+      <a-descriptions-item label="Size">
+        <span v-for="color in product?.sizes" class="color">{{color.sizeId}}</span>
       </a-descriptions-item>
       <a-descriptions-item label="Description">{{ product.content ?? '-'}}</a-descriptions-item>
       </a-descriptions>
@@ -22,7 +25,7 @@
           <a-image
             v-for="image in product.images"
             :width="100"
-            :src="'backend/uploads/' + image.image"
+            :src="image.image"
           />
       </a-flex>
     </template>
@@ -59,7 +62,6 @@ const handleDelete = () => {
 const fetchProductById = async () => {
   const productData = await getProductById(id);
   product.value = productData;
-  console.log(product.value)
 };
 
 const updateForm = async (value) => {

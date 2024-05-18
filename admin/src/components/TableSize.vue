@@ -1,6 +1,6 @@
 <template>
     <div class="text-end mb-2">
-      <a-button type="primary" @click="showModal">Add new brand</a-button>
+      <a-button type="primary" @click="showModal">Add new Size</a-button>
     </div>
     <a-table :dataSource="listColor" :columns="columns">
       <template #bodyCell="{ column, record }">

@@ -115,14 +115,14 @@ onMounted(async () => {
 });
 
 const filteredProductList = computed(() => {
-  let filteredList = products;
+  let filteredList = products.value;
   if (inputSearchName.value) {
     const searchQuery = inputSearchName.value.toLowerCase()
-    filteredList = filteredList.filter(task => task.name?.toLowerCase().includes(searchQuery))
+    filteredList = filteredList.filter(item => item.name?.toLowerCase().includes(searchQuery))
   }
   // if (color.value) {
   //   filteredList = filteredList.filter(task => task.color === color.value)
   // }
-  return filteredList.value
+  return filteredList
 })
 </script>
