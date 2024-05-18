@@ -182,33 +182,56 @@ const getAllProductAdmin = async (data) => {
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
-    const productsWithDetails = res.rows.reduce((acc, product) => {
-      if (!acc.find((item) => item.id === product.id)) {
+    const productsWithDetails = [];
+
+    for (const product of res.rows) {
+      const images = await db.sequelize.query(`
+        SELECT image FROM product_images WHERE productDetailId = ${product.id}
+      `, { type: db.sequelize.QueryTypes.SELECT });
+
+      const imagesBase64 = [];
+      try {
+        for (const img of images) {
+          const imagePath = path.join(__dirname, '../..', 'uploads', img.image);
+          await fs.stat(imagePath);
+          const data = await fs.readFile(imagePath);
+          const imageData = data.toString('base64');
+          const imageBase64 = `data:image/jpeg;base64,${imageData}`;
+          imagesBase64.push({
+            image: imageBase64
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing images for product ID ${product.id}: ${error.message}`);
+        continue;
+      }
+
+      if (!productsWithDetails.find((item) => item.id === product.id)) {
         const productDetail = product.productDetailData;
         const brand = product.brandData ? product.brandData.value : "";
         const status = product.statusData ? product.statusData.value : "";
         let image = "";
+
         if (productDetail && productDetail.productImageData) {
           const firstImage = Array.isArray(productDetail.productImageData)
             ? productDetail.productImageData[0]
             : productDetail.productImageData;
           image = firstImage ? firstImage.image : "";
         }
-        console.log(product)
-        acc.push({
+
+        productsWithDetails.push({
           id: product.id,
           name: product.name,
           category: product.categoryData.value,
           view: product.view,
           brand: brand,
           status: status,
-          image: image,
+          images: imagesBase64,
           originalPrice: productDetail.originalPrice || "",
           discountPrice: productDetail.discountPrice || "",
         });
       }
-      return acc;
-    }, []);
+    }
 
     return {
       result: productsWithDetails,
@@ -274,30 +297,56 @@ const getAllProductUser = async (data) => {
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
-    const productsWithDetails = res.rows.reduce((acc, product) => {
-      if (!acc.find((item) => item.id === product.id)) {
+    const productsWithDetails = [];
+
+    for (const product of res.rows) {
+      const images = await db.sequelize.query(`
+        SELECT image FROM product_images WHERE productDetailId = ${product.id}
+      `, { type: db.sequelize.QueryTypes.SELECT });
+
+      const imagesBase64 = [];
+      try {
+        for (const img of images) {
+          const imagePath = path.join(__dirname, '../..', 'uploads', img.image);
+          await fs.stat(imagePath);
+          const data = await fs.readFile(imagePath);
+          const imageData = data.toString('base64');
+          const imageBase64 = `data:image/jpeg;base64,${imageData}`;
+          imagesBase64.push({
+            image: imageBase64
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing images for product ID ${product.id}: ${error.message}`);
+        continue;
+      }
+
+      if (!productsWithDetails.find((item) => item.id === product.id)) {
         const productDetail = product.productDetailData;
         const brand = product.brandData ? product.brandData.value : "";
+        const status = product.statusData ? product.statusData.value : "";
         let image = "";
+
         if (productDetail && productDetail.productImageData) {
           const firstImage = Array.isArray(productDetail.productImageData)
             ? productDetail.productImageData[0]
             : productDetail.productImageData;
           image = firstImage ? firstImage.image : "";
         }
-        acc.push({
+
+        productsWithDetails.push({
           id: product.id,
           name: product.name,
           category: product.categoryData.value,
           view: product.view,
           brand: brand,
-          image: image,
+          status: status,
+          images: imagesBase64,
           originalPrice: productDetail.originalPrice || "",
           discountPrice: productDetail.discountPrice || "",
         });
       }
-      return acc;
-    }, []);
+    }
 
     return {
       result: productsWithDetails,
