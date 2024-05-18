@@ -313,7 +313,7 @@ const getProductById = async (data) => {
         {
           model: db.Product,
           as: "productData",
-          attributes: ["name", "content", "view"],
+          attributes: ["name", "content", "view", "statusId"],
           include: [
             {
               model: db.AllCode,
@@ -333,17 +333,23 @@ const getProductById = async (data) => {
       raw: true,
       nest: true,
     });
+
     const colors = await db.sequelize.query(`
-      SELECT color FROM product_details where productId = ${data.id}
+    SELECT all_codes.* FROM product_details left join all_codes on product_details.color = all_codes.code where productId = ${data.id}
     `, { type: db.sequelize.QueryTypes.SELECT });
+
     const images = await db.sequelize.query(`
     SELECT image FROM product_images where productDetailId = ${data.id}
+  `, { type: db.sequelize.QueryTypes.SELECT });
+    
+    const sizes = await db.sequelize.query(`
+    SELECT * FROM product_sizes where productDetailId = ${data.id}
   `, { type: db.sequelize.QueryTypes.SELECT });
     // If no product details found, return error
     if (!productDetails.rows.length) {
       return notFound("Product details");
     }
-
+    
     // Extract common properties from the first product detail
     const firstProductDetail = productDetails.rows[0];
     const {
@@ -353,30 +359,14 @@ const getProductById = async (data) => {
         name,
         content,
         view,
-        brandData: { value: brand },
-        categoryData: { value: category },
+        brandData,
+        categoryData,
+        statusId
       },
     } = firstProductDetail;
-    console.log(firstProductDetail);
-    // Initialize arrays for colors, images, and sizes
-    // let colors = [];
-    // let images = [];
-    let sizes = [];
 
     // Iterate through each product detail
     productDetails.rows.forEach((productDetail) => {
-      // Push size to the array if it exists and is not already included
-      // if (
-      //   productDetail.sizeData &&
-      //   productDetail.sizeData.sizeId &&
-      //   !sizes.some((size) => size.id === productDetail.sizeData.id)
-      // ) {
-      //   sizes.push({
-      //     id: productDetail.sizeData.id,
-      //     name: productDetail.sizeData.sizeId,
-      //   });
-      // }
-
       // Push image to the array if it exists
       if (
         productDetail.productImageData &&
@@ -388,35 +378,39 @@ const getProductById = async (data) => {
           name: productDetail.productImageData.image,
         });
       }
-
-      // Push color to the array if it exists and is not already included
-      // if (
-      //   productDetail.color &&
-      //   !colors.some((color) => color.name === productDetail.color)
-      // ) {
-      //   colors.push({
-      //     id: colors.length + 1, // Generate a unique id for the color
-      //     name: productDetail.color,
-      //   });
-      // }
     });
 
+    
+    const imagesBase64 = [];
+    try {
+      for (const img of images) {
+        const imagePath = path.join(__dirname, '../..', 'uploads', img.image);
+        await fs.stat(imagePath);
+        const data = await fs.readFile(imagePath);
+        const imageData = data.toString('base64');
+        const imageBase64 = `data:image/jpeg;base64,${imageData}`;
+        imagesBase64.push({
+          image: imageBase64
+        })
+      }
+    } catch (error) {
+      return errorResponse(error.message);
+    }
     return {
-      result: [
-        {
+      result: {
           id,
           name,
           content,
           view,
           originalPrice,
           discountPrice,
-          brand,
-          category,
-          images,
+          brand: brandData,
+          category: categoryData,
+          images: imagesBase64,
+          statusId,
           sizes,
           colors,
         },
-      ],
       statusCode: 200,
       errors: ["Get all product details successfully!"],
     };
@@ -503,7 +497,8 @@ const updateProduct = async (data) => {
         where: { productId: data.productId },
       });
     }
-    const arrayColor = JSON.parse(data.color);
+    const arrayColor = data.color.split(/[,]/);
+    console.log(arrayColor)
     for (const color of arrayColor) {
       try {
         await db.ProductDetail.create({

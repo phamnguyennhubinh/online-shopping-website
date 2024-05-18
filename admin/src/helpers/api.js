@@ -1,8 +1,8 @@
 // products
 export const GET_ALL_PRODUCT = '/product/get-all-admin'
-export const GET_PRODUCT_BY_ID = (id) => `/product/detail/get-by-id?id=${id}`;
+export const GET_PRODUCT_BY_ID = (id) => `/product/get-by-id?id=${id}`;
 export const DELETE_PRODUCT_BY_ID = (id) => `/product/detail/delete?id=${id}`;
-export const UPDATE_PRODUCT_BY_ID = '/product/detail/update';
+export const UPDATE_PRODUCT_BY_ID = '/product/update';
 export const CREATE_PRODUCT = '/product/create'
 
 // orders

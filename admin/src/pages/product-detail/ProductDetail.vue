@@ -10,25 +10,19 @@
       <a-descriptions-item label="Product">{{ product.name ?? '-' }}</a-descriptions-item>
       <a-descriptions-item label="Price">{{ Utils.formatVndCurrency(product.originalPrice ?? '-') }}</a-descriptions-item>
       <a-descriptions-item label="Price Discount">{{ Utils.formatVndCurrency(product.discountPrice ?? '-') }}</a-descriptions-item>
-      <a-descriptions-item label="Status">On</a-descriptions-item>
-      <a-descriptions-item label="Brand">{{ product.brandId ?? '-'}}</a-descriptions-item>
-      <a-descriptions-item label="Color">{{ product.color ?? '-'}}</a-descriptions-item>
+      <a-descriptions-item label="Status">{{ product?.statusId === 'S1' ? 'On' : 'Off'}}</a-descriptions-item>
+      <a-descriptions-item label="Brand">{{ product?.brand?.value ?? '-'}}</a-descriptions-item>
+      <a-descriptions-item label="Color">
+        <span v-for="color in product?.colors" class="color">{{color.value}}</span>
+      </a-descriptions-item>
       <a-descriptions-item label="Description">{{ product.content ?? '-'}}</a-descriptions-item>
       </a-descriptions>
       <a-flex gap="middle">
-        Images: 
-        <a-image
-            :width="100"
-            class="inline-block"
-            src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png"
-          />
+        Images:
           <a-image
+            v-for="image in product.images"
             :width="100"
-            src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png"
-          />
-          <a-image
-            :width="100"
-            src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png"
+            :src="'backend/uploads/' + image.image"
           />
       </a-flex>
     </template>
@@ -64,7 +58,8 @@ const handleDelete = () => {
 }
 const fetchProductById = async () => {
   const productData = await getProductById(id);
-  product.value = productData[0];
+  product.value = productData;
+  console.log(product.value)
 };
 
 const updateForm = async (value) => {
@@ -82,3 +77,12 @@ onMounted( async () => {
   await fetchProductById();
 })
 </script>
+<style>
+  .color {
+    display: inline-block;
+    padding: 0px 5px;
+    border: 1px solid #797979;
+    margin-right: 5px;
+    border-radius: 5px;
+  }
+</style>

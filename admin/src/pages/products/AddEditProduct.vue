@@ -10,16 +10,14 @@
       <a-col :span="12">
         <a-form-item label="Branch" name="branch">
           <a-select v-model:value="formState.brand" placeholder="please select your zone">
-            <a-select-option value="shanghai">Chà Neo</a-select-option>
-            <a-select-option value="beijing">Luôn Vui Tươi</a-select-option>
+            <a-select-option v-for="brand in listBrand" :value="brand.code">{{ brand.value }}</a-select-option>
           </a-select>
         </a-form-item>
       </a-col>
       <a-col :span="12">
         <a-form-item label="Color" name="color">
           <a-select v-model:value="formState.color" mode="multiple" placeholder="please select your zone">
-            <a-select-option value="xanh-den">Xanh đen</a-select-option>
-            <a-select-option value="do">Đỏ</a-select-option>
+            <a-select-option :value="color.code" v-for="color in listColor">{{ color.value }}</a-select-option>
           </a-select>
         </a-form-item>
       </a-col>
@@ -34,7 +32,7 @@
         </a-form-item>
       </a-col>
       <a-col :span="12">
-        <a-form-item label="Status" name="resource">
+        <a-form-item label="Status" name="statusId">
           <a-radio-group v-model:value="formState.statusId">
             <a-radio value="S1">Off</a-radio>
             <a-radio value="S2">On</a-radio>
@@ -66,8 +64,9 @@
   </a-form>
 </template>
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
 import { useProducts } from '@/stores/products';
+import { useSettings } from '@/stores/settings';
 import router from '@/router';
 import { useRoute } from 'vue-router'
 
@@ -89,24 +88,27 @@ const props = defineProps({
 })
 
 const { updateProduct, createProduct } = useProducts();
+const { getListBrand, getListColor } = useSettings();
 const { dataSource, isEdit } = props
 const formRef = ref();
-const labelCol = {
-  span: 2
-};
+const listColor = ref([]);
+const listBrand = ref([]);
 
-const wrapperCol = {
-  span: 14,
-};
-
+const fetchSettings = async () => {
+  const resBrand = await getListBrand();
+  listBrand.value = resBrand
+  const resColor = await getListColor();
+  listColor.value = resColor
+}
+console.log(dataSource)
 const id = route.params.id;
 const formState = reactive({
   id: id,
   name: dataSource.name ?? '',
-  brand: dataSource.brand ?? '',
-  resource: dataSource.resource ?? '',
+  brand: dataSource.brand.code ?? '',
+  statusId: dataSource.statusId ?? '',
   content: dataSource.content ?? '',
-  color: dataSource.color ?? [],
+  color: dataSource.colors.map(item => item.code) ?? [],
   categoryId: 'ao-thun',
   statusId: 'S2',
   originalPrice: dataSource.originalPrice ?? '',
@@ -135,7 +137,7 @@ const rules = {
       trigger: 'change',
     },
   ],
-  resource: [
+  statusId: [
     {
       required: false,
       message: 'Please select activity status',
@@ -163,7 +165,7 @@ const onSubmit = async (mode) => {
     let res;
     const formData = new FormData();
     formState.brandId = formState.brand;
-    console.log(formState.fileListProduct)
+    formState.productId = dataSource.id
     for (const key in formState) {
       if (key !== 'fileListProduct') {
         formData.append(key, formState[key]);
@@ -189,4 +191,8 @@ const onSubmit = async (mode) => {
 const resetForm = () => {
   formRef.value.resetFields();
 };
+
+onMounted( async () => {
+  await fetchSettings()
+})
 </script>
