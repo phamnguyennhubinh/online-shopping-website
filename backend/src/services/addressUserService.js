@@ -33,7 +33,7 @@ const getAllAddressUser = async (userId) => {
     });
 
     return {
-      result: [addresses],
+      result: addresses,
       statusCode: 200,
       errors: ["Retrieved all address user successfully!"],
     };
