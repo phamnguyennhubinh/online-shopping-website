@@ -72,9 +72,9 @@ const handleChangeInputSearch = (event) => {
 
 const columns = [
   { title: 'No', dataIndex: 'key', key: 'key' },
-  { title: 'Name', dataIndex: 'name', key: 'name' },
+  { title: 'Name', dataIndex: 'fullName', key: 'fullName' },
   { title: 'Address', dataIndex: 'address', key: 'address' },
-  { title: 'Phone Number', dataIndex: 'phone', key: 'phone' },
+  { title: 'Phone Number', dataIndex: 'phoneNumber', key: 'phoneNumber' },
   { title: 'Action', key: 'operation' },
 ];
 

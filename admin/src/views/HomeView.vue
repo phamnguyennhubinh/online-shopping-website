@@ -5,7 +5,7 @@
       <span class="title">Total orders</span>
       <span>{{ totalOrders }}</span>
     </div>
-    <div class="total">
+    <!-- <div class="total">
       <span class="title">Orders Pending</span>
       <span>{{ totalOrdersPending }}</span>
     </div>
@@ -16,19 +16,21 @@
     <div class="total">
       <span class="title">Total orders canceled</span>
       <span>{{ totalOrdersCancel }}</span>
-    </div>
+    </div> -->
+    
   </div>
+  <ChartBar />
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useOrders } from '@/stores/orders';
+import ChartBar from '@/components/ChartBar.vue'
 
 const { getAllOrders } = useOrders();
 const totalOrders = ref(0);
 const totalOrdersPending = ref(0);
 const totalOrdersDelivered = ref(0);
 const totalOrdersCancel = ref(0);
-
 onMounted(async() => {
   const res = await getAllOrders();
   const s1 = res.filter(item => item.statusOrder === 'S1').length;
