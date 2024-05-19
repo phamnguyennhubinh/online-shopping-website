@@ -42,18 +42,18 @@ function dynamicSortMultiple() {
 }
 function getSizeDetails(size) {
   switch (size.toUpperCase()) {
-      case 'S':
-          return { height: "1m60-1m65", weight: "55kg-60kg" };
-      case 'M':
-          return { height: "1m64-1m69", weight: "60kg-65kg" };
-      case 'L':
-          return { height: "1m70-1m74", weight: "66kg-70kg" };
-      case 'XL':
-          return { height: "1m74-1m76", weight: "70kg-76kg" };
-      case 'XXL':
-          return { height: "1m66-1m77", weight: "76kg-80kg" };
-      default:
-          return null;
+    case "S":
+      return { height: "1m60-1m65", weight: "55kg-60kg" };
+    case "M":
+      return { height: "1m64-1m69", weight: "60kg-65kg" };
+    case "L":
+      return { height: "1m70-1m74", weight: "66kg-70kg" };
+    case "XL":
+      return { height: "1m74-1m76", weight: "70kg-76kg" };
+    case "XXL":
+      return { height: "1m66-1m77", weight: "76kg-80kg" };
+    default:
+      return null;
   }
 }
 // PRODUCT
@@ -63,8 +63,8 @@ const createProduct = async (data) => {
     if (!data.categoryId || !data.brandId) {
       return missingRequiredParams("Category, Brand are");
     }
+
     // Create product
-    const arrayColor =  data.color.split(",").map(item => item.trim());
     const product = await db.Product.create({
       name: data.name,
       content: data.content,
@@ -72,13 +72,15 @@ const createProduct = async (data) => {
       categoryId: data.categoryId,
       brandId: data.brandId,
     });
+
     // Check if product creation was successful
     if (!product) {
-      return errorResponse(error.message);
+      return errorResponse("Failed to create product");
     }
-    // Create product detail
-    const productDetails = [];
 
+    // Create product details
+    const arrayColor = data.color.split(",").map((item) => item.trim());
+    const productDetails = [];
     for (const color of arrayColor) {
       try {
         const productDetail = await db.ProductDetail.create({
@@ -88,45 +90,58 @@ const createProduct = async (data) => {
           discountPrice: data.discountPrice,
         });
         productDetails.push(productDetail);
-      } catch (error) {
-        console.error("Error creating product detail:", error);
-      }
-    }
-    
-    // Check if product detail creation was successful
-    if (!productDetails) {
-      return errorResponse(error.message);
-    }
-    const arraySize =  data.size.split(",").map(item => item.trim());
-    const { userId, supplierId, sizeId, quantity, price } = data;
-    for (const size of arraySize) {
-      try {
-        const sizeInfo = getSizeDetails(size);
-        await db.ProductSize.create({
-          productDetailId: product.id,
-          height: sizeInfo.height,
-          weight: sizeInfo.weight,
-          sizeId: size,
-        });
 
-        const receipt = await db.Receipt.create({ userId, supplierId });
-        if (receipt) {
-          await db.ReceiptDetail.create({
-            receiptId: receipt.id,
-            sizeId,
-            quantity,
-            price,
-          });
+        // Create sizes and associate them with product details
+        const arraySize = data.size.split(",").map((item) => item.trim());
+        const { userId, supplierId, quantity, price } = data;
+        for (const size of arraySize) {
+          try {
+            const sizeInfo = getSizeDetails(size);
+            await db.ProductSize.create({
+              productDetailId: productDetail.id,
+              height: sizeInfo.height,
+              weight: sizeInfo.weight,
+              sizeId: size,
+            });
+
+            const receipt = await db.Receipt.create({ userId, supplierId });
+            if (receipt) {
+              await db.ReceiptDetail.create({
+                receiptId: receipt.id,
+                sizeId: size,
+                quantity,
+                price,
+              });
+            }
+          } catch (error) {
+            console.error("Error creating product size or receipt:", error);
+          }
         }
       } catch (error) {
         console.error("Error creating product detail:", error);
       }
     }
-    
-    const imagePaths = await uploadFiles(data.files);
-    await saveProductImages(product.id, imagePaths);
 
-    return successResponse("Product created");
+    // Check if product detail creation was successful
+    if (productDetails.length === 0) {
+      return errorResponse("Failed to create product details");
+    }
+
+    // Upload and save product images
+    const imagePaths = await uploadFiles(data.files);
+    for (const productDetail of productDetails) {
+      try {
+        await saveProductImages(productDetail.id, imagePaths);
+      } catch (error) {
+        console.error(
+          "Error saving product images for ProductDetail:",
+          productDetail.id,
+          error
+        );
+      }
+    }
+
+    return successResponse("Product created successfully");
   } catch (error) {
     console.error("Error creating product:", error);
     return errorResponse(error.message);
@@ -196,24 +211,29 @@ const getAllProductAdmin = async (data) => {
     const productsWithDetails = [];
 
     for (const product of res.rows) {
-      const images = await db.sequelize.query(`
+      const images = await db.sequelize.query(
+        `
         SELECT image FROM product_images WHERE productDetailId = ${product.id}
-      `, { type: db.sequelize.QueryTypes.SELECT });
+      `,
+        { type: db.sequelize.QueryTypes.SELECT }
+      );
 
       const imagesBase64 = [];
       try {
         for (const img of images) {
-          const imagePath = path.join(__dirname, '../..', 'uploads', img.image);
+          const imagePath = path.join(__dirname, "../..", "uploads", img.image);
           await fs.stat(imagePath);
           const data = await fs.readFile(imagePath);
-          const imageData = data.toString('base64');
+          const imageData = data.toString("base64");
           const imageBase64 = `data:image/jpeg;base64,${imageData}`;
           imagesBase64.push({
-            image: imageBase64
+            image: imageBase64,
           });
         }
       } catch (error) {
-        console.error(`Error processing images for product ID ${product.id}: ${error.message}`);
+        console.error(
+          `Error processing images for product ID ${product.id}: ${error.message}`
+        );
         continue;
       }
 
@@ -311,24 +331,29 @@ const getAllProductUser = async (data) => {
     const productsWithDetails = [];
 
     for (const product of res.rows) {
-      const images = await db.sequelize.query(`
+      const images = await db.sequelize.query(
+        `
         SELECT image FROM product_images WHERE productDetailId = ${product.id}
-      `, { type: db.sequelize.QueryTypes.SELECT });
+      `,
+        { type: db.sequelize.QueryTypes.SELECT }
+      );
 
       const imagesBase64 = [];
       try {
         for (const img of images) {
-          const imagePath = path.join(__dirname, '../..', 'uploads', img.image);
+          const imagePath = path.join(__dirname, "../..", "uploads", img.image);
           await fs.stat(imagePath);
           const data = await fs.readFile(imagePath);
-          const imageData = data.toString('base64');
+          const imageData = data.toString("base64");
           const imageBase64 = `data:image/jpeg;base64,${imageData}`;
           imagesBase64.push({
-            image: imageBase64
+            image: imageBase64,
           });
         }
       } catch (error) {
-        console.error(`Error processing images for product ID ${product.id}: ${error.message}`);
+        console.error(
+          `Error processing images for product ID ${product.id}: ${error.message}`
+        );
         continue;
       }
 
@@ -411,35 +436,37 @@ const getProductById = async (data) => {
       nest: true,
     });
 
-    const colors = await db.sequelize.query(`
+    const colors = await db.sequelize.query(
+      `
     SELECT all_codes.* FROM product_details left join all_codes on product_details.color = all_codes.code where productId = ${data.id}
-    `, { type: db.sequelize.QueryTypes.SELECT });
+    `,
+      { type: db.sequelize.QueryTypes.SELECT }
+    );
 
-    const images = await db.sequelize.query(`
+    const images = await db.sequelize.query(
+      `
     SELECT image FROM product_images where productDetailId = ${data.id}
-  `, { type: db.sequelize.QueryTypes.SELECT });
-    
-    const sizes = await db.sequelize.query(`
+  `,
+      { type: db.sequelize.QueryTypes.SELECT }
+    );
+
+    const sizes = await db.sequelize.query(
+      `
     SELECT * FROM product_sizes where productDetailId = ${data.id}
-  `, { type: db.sequelize.QueryTypes.SELECT });
+  `,
+      { type: db.sequelize.QueryTypes.SELECT }
+    );
     // If no product details found, return error
     if (!productDetails.rows.length) {
       return notFound("Product details");
     }
-    
+
     // Extract common properties from the first product detail
     const firstProductDetail = productDetails.rows[0];
     const {
       originalPrice,
       discountPrice,
-      productData: {
-        name,
-        content,
-        view,
-        brandData,
-        categoryData,
-        statusId
-      },
+      productData: { name, content, view, brandData, categoryData, statusId },
     } = firstProductDetail;
 
     // Iterate through each product detail
@@ -457,37 +484,36 @@ const getProductById = async (data) => {
       }
     });
 
-    
     const imagesBase64 = [];
     try {
       for (const img of images) {
-        const imagePath = path.join(__dirname, '../..', 'uploads', img.image);
+        const imagePath = path.join(__dirname, "../..", "uploads", img.image);
         await fs.stat(imagePath);
         const data = await fs.readFile(imagePath);
-        const imageData = data.toString('base64');
+        const imageData = data.toString("base64");
         const imageBase64 = `data:image/jpeg;base64,${imageData}`;
         imagesBase64.push({
-          image: imageBase64
-        })
+          image: imageBase64,
+        });
       }
     } catch (error) {
       return errorResponse(error.message);
     }
     return {
       result: {
-          id,
-          name,
-          content,
-          view,
-          originalPrice,
-          discountPrice,
-          brand: brandData,
-          category: categoryData,
-          images: imagesBase64,
-          statusId,
-          sizes,
-          colors,
-        },
+        id,
+        name,
+        content,
+        view,
+        originalPrice,
+        discountPrice,
+        brand: brandData,
+        category: categoryData,
+        images: imagesBase64,
+        statusId,
+        sizes,
+        colors,
+      },
       statusCode: 200,
       errors: ["Get all product details successfully!"],
     };
@@ -599,7 +625,7 @@ const updateProduct = async (data) => {
       });
     }
     const arraySize = data.size.split(/[,]/);
-    console.log(arraySize)
+    console.log(arraySize);
     for (const size of arraySize) {
       try {
         const sizeInfo = getSizeDetails(size);
@@ -840,7 +866,7 @@ const uploadFiles = async (files) => {
   }
 
   const fileUploadPromises = files.map(async (file) => {
-    const now = new Date()
+    const now = new Date();
     const fileName = `${now.getTime()}_${file.originalname}`;
     const filePath = path.join(uploadDirectory, fileName);
 
