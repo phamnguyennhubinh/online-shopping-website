@@ -13,7 +13,7 @@
       </template>
     </template>
   </a-table>
-  <a-modal v-model:open="open" title="Add Color" @ok="handleOk">
+  <a-modal v-model:open="open" title="Add TypeShip" @ok="handleOk">
     <a-form ref="formRef" layout="vertical" :model="formState">
       <a-row :gutter="10">
         <a-col :span="24">
@@ -22,7 +22,7 @@
           </a-form-item>
         </a-col>
         <a-col :span="24">
-          <a-form-item label="Value" name="type" :rules="[{ required: true, message: 'Please input name' }]">
+          <a-form-item label="Price" name="type" :rules="[{ required: true, message: 'Please input name' }]">
             <a-input v-model:value="formState.type" />
           </a-form-item>
         </a-col>
