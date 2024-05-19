@@ -12,6 +12,9 @@
       <a-tab-pane key="3" tab="Size">
         <TableSize />
       </a-tab-pane>
+      <a-tab-pane key="4" tab="Type Ship">
+        <TableTypeShip />
+      </a-tab-pane>
     </a-tabs>
   </div>
 </template>
@@ -20,6 +23,7 @@ import { ref } from 'vue';
 import TableColor from '@/components/TableColor.vue'
 import TableBrand from '@/components/TableBrand.vue'
 import TableSize from '@/components/TableSize.vue'
+import TableTypeShip from '@/components/TableTypeShip.vue'
 
 const mode = ref('top');
 const activeKey = ref('1');

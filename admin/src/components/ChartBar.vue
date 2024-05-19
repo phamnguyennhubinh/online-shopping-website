@@ -17,7 +17,7 @@ export default {
     return {
       orders: [],
       chart: null,
-      weeklyRevenue: 0
+      weeklyRevenue: 0,
     };
   },
   async mounted() {

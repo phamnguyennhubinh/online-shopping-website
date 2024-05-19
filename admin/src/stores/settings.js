@@ -5,7 +5,8 @@ import {
   CREATE_CODE,
   UPDATE_CODE,
   DELETE_CODE,
-  GET_SIZE
+  GET_SIZE,
+  DELETE_TYPE_SHIP
 } from '@/helpers/api'
 import { AxiosInstance } from '@/helpers/request';
 import { message } from 'ant-design-vue';
@@ -68,6 +69,41 @@ export const useSettings = defineStore({
       try {
         const res = await AxiosInstance.delete(DELETE_CODE(id));
         message.success('Delete successful !');
+        return res.data.result
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    async getTypeShip() {
+      try {
+        const res = await AxiosInstance.get(GET_TYPE_SHIP);
+        return res?.data?.result ?? []
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    async deleteTypeShip(body) {
+      try {
+        const res = await AxiosInstance.delete(DELETE_TYPE_SHIP, body);
+        message.success('Delete successful !');
+        return res.data.result
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    async createTypeShip(body) {
+      try {
+        const res = await AxiosInstance.post(GET_TYPE_SHIP, body);
+        message.success('Create successful !');
+        return res.data.result
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    async updateTypeShip(body) {
+      try {
+        const res = await AxiosInstance.post(UPDATE_TYPE_SHIP, body);
+        message.success('Update successful !');
         return res.data.result
       } catch (error) {
         console.log(error);

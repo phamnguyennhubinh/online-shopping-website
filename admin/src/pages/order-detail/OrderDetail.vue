@@ -10,11 +10,11 @@
       <a-descriptions-item label="Address">{{ order?.addressUser?.shipAddress }}</a-descriptions-item>
       <a-descriptions-item label="Email">{{ order?.addressUser?.shipEmail }}</a-descriptions-item>
       <a-descriptions-item label="Phone Number">{{ order?.addressUser?.shipPhoneNumber }}</a-descriptions-item>
-      <a-descriptions-item label="Type Ship">{{ order?.addressUser?.typeShip }}</a-descriptions-item>
+      <a-descriptions-item label="Type Ship">{{ order?.typeShip }}</a-descriptions-item>
     </a-descriptions>
     <br>
     <div class="ant-descriptions-title mb-2">Sản phẩm:</div>
-    <div v-for="product in order?.products">
+    <div v-for="product in currentOrder?.products">
       <a-descriptions>
         <a-descriptions-item label="Produc Name">{{ product?.productName }}</a-descriptions-item>
         <a-descriptions-item label="Price">{{ Utils.formatVndCurrency(product?.priceProduct) }}</a-descriptions-item>
@@ -33,7 +33,7 @@ import Utils from '@/helpers/utils'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import { useRoute } from 'vue-router'
 
-const { getOrdersById, updateOrder } = useOrders();
+const { getOrdersById, updateOrder, getAllOrders } = useOrders();
 const route = useRoute()
 const id = route.params.id;
 const order = ref({});
@@ -68,8 +68,12 @@ const handleChange = async (value) => {
   await fetchOrdersById()
 };
 const value = ref("S1");
+const currentOrder = ref({});
 const fetchOrdersById = async () => {
   const res = await getOrdersById(id);
+  const test = await getAllOrders();
+  const result = test.find(item => item.id == id)
+  currentOrder.value = result
   order.value = res;
   value.value = res.statusId
 }

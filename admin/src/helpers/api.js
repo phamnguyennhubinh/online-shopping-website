@@ -35,6 +35,10 @@ export const GET_SIZE = '/code?type=size'
 export const CREATE_CODE = '/code/create'
 export const UPDATE_CODE = '/code/update'
 export const DELETE_CODE = (id) => `/code/delete?id=${id}`
+export const CREATE_TYPE_SHIP = '/type-ship/create'
+export const UPDATE_TYPE_SHIP = '/type-ship/update'
+export const GET_TYPE_SHIP = '/type-ship'
+export const DELETE_TYPE_SHIP = '/type-ship/delete'
 
 // cart
 export const GET_ALL_CART = '/shop-cart/add'

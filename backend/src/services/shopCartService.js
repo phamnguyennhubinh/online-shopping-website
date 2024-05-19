@@ -21,7 +21,7 @@ const calculateStock = async (sizeId, orderDetails) => {
     // Subtract quantities from orders if orderDetails exist
     if (Array.isArray(orderDetails)) {
       for (const order of orderDetails) {
-        if (order && order.statusId !== "S7" && order.sizeId === sizeId) {
+        if (order && order.statusId !== "S3" && order.sizeId === sizeId) {
           // S7: hủy đơn
           totalQuantity -= order.quantity;
         }
@@ -42,7 +42,6 @@ const addShopCart = async (data, orderDetails) => {
     }
 
     const stock = await calculateStock(data.sizeId, orderDetails);
-
     if (+data.quantity > stock) {
       return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
     } else {
