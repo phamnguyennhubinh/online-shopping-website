@@ -1,9 +1,10 @@
 <template>
   <div id="app">
-  <div v-if="counterStore.isLoading!=0" class="loader-overlay">
-    <center><img src="@\assets\spin.gif"/></center>
-  </div>
-    <PrimaryPage/>
+    <!-- <div v-if="counterStore.isLoading!=0" class="loader-overlay">
+      <center><img src="@\assets\spin.gif"/></center>
+    </div> -->
+    <PrimaryPage v-if="!isAdminRoute" />
+    <router-view v-else />
   </div>
 </template>
 
@@ -12,11 +13,11 @@ import PrimaryPage from './views/PrimaryPage.vue';
 import { useCounterStore } from "@/stores/index";
 import { computed, onMounted} from 'vue';
 const counterStore = useCounterStore();
+const isAdminRoute = window.location.pathname.startsWith('/admin');
 // const array = JSON.parse(localStorage.getItem("cart"));
 counterStore.countC = computed(() => counterStore.listCarts.length);
 onMounted(async ()=>{
   const customerId = JSON.parse(localStorage.getItem("idCustomer")) || null;
-  console.log("======================================",customerId)
   if(customerId === null){
     counterStore.listCarts = [];
   }

@@ -1,10 +1,12 @@
 import * as request from "@/utils/request";
-import * as req_json from "@/utils/request";
 
 //get type ship from lasted backend
 export const type_ship = async () => {
   try {
     const res = await request.get_from_be("api/type-ship");
+    if(res.data) {
+      return res.data;
+    }
     return res;
   } catch (error) {
     console.log(error);
@@ -44,12 +46,25 @@ export const get = async (data) => {
 };
 
 //get products
-export const listProducts = async (perPage, page) => {
+export const listProducts = async () => {
   try {
     //  const res = await request.get(`products?_limit=${perPage}&_page=${page}`);
     const res = await request.get_from_be(
-      `api/product/get-all-user?limit=${perPage}&offset=${page}`
+      `api/product/get-all-user`
     );
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+//fixed
+export const eachProduct = async (id) => {
+  try {
+    const res = await request.get_from_be(`api/product/get-by-id?id=${id}`);
     if(res.data) {
       return res.data;
     }
@@ -63,7 +78,7 @@ export const listProducts = async (perPage, page) => {
 export const getCustomerCart = async (customerId) => {
   try {
     const res = await request.get_from_be(`api/shop-cart/by-user-id?userId=${customerId}`);
-    console.log("is undefined: ", res);
+    // console.log("is undefined: ", res);
     if(res.data) {
       return res.data;
     }
@@ -73,14 +88,53 @@ export const getCustomerCart = async (customerId) => {
   }
 };
 
-//fixed
-export const saving = async () => {
+// ADD TO CART
+export const addItemToCart = async (data) => {
   try {
-    const res = await request.get("setting/sections/4");
-    const resultObject = JSON.parse(res);
-    return resultObject;
+const res = await request.post_from_be("api/shop-cart/add", data);
+  if(res.data) {
+    return res.data;
+  }
+  return res;
   } catch (error) {
-    console.log("This is error in savingService.saving: ", error);
+    console.log(error);
+  }
+}
+
+export const deleteCart = async (cartId) => {
+  try {
+    const res = await request.delete_from_be(`api/shop-cart/delete?id=${cartId}`);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+///Order from backend
+export const getOrder = async (cartId) => {
+  try {
+    const res = await request.get_from_be(`api/shop-cart/delete?id=${cartId}`);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getAllOrder = async () => {
+  try {
+    const res = await request.get_from_be(`/api/order`);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
   }
 };
 
@@ -103,17 +157,6 @@ export const gift = async () => {
   }
 };
 
-//fixed
-export const slide = async () => {
-  try {
-    const res = await request.get("setting/slide");
-    const resultObject = JSON.parse(res);
-    return resultObject;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
 export const product = async () => {
   try {
     const res = await request.get("/product/list");
@@ -123,78 +166,18 @@ export const product = async () => {
   }
 };
 
-//fixed
-export const about = async () => {
-  try {
-    const res = await request.get("setting/about");
-    const resultObject = JSON.parse(res);
-    return resultObject;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-//fixed
-export const help = async () => {
-  try {
-    const res = await request.get("setting/help");
-    const resultObject = JSON.parse(res);
-    return resultObject;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-//fixed
-export const contact = async () => {
-  try {
-    const res = await request.get("setting/contact");
-    const resultObject = JSON.parse(res);
-    return resultObject;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-//fixed
-export const eachProduct = async (id) => {
-  try {
-    const res = await request.get(`product/${id}`);
-    const resultObject = JSON.parse(res);
-    return resultObject;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
 //getcartid by customerid
-export const getCartIdByCustomerId = async (customerId) => {
-  const res = await request.get(`cart/getCartId/${customerId}`);
-  const resultObject = JSON.parse(res);
-  return resultObject;
-};
+// export const getCartIdByCustomerId = async (customerId) => {
+//   const res = await request.get(`cart/getCartId/${customerId}`);
+//   const resultObject = JSON.parse(res);
+//   return resultObject;
+// };
 
-//POST item to cart --- new
-export const addItemToCart = async (cartId, productId, quantity) => {
-  const res = await request.post(`cart/add-item?cartId=${cartId}&productId=${productId}&quantity=${quantity}`);
-  const resultObject = res;
-  return resultObject;
-}
-
-export const getListAccounts = async () => {
-  try {
-    const res = await req_json.get_json("listAccounts");
-    return res;
-  } catch (error) {
-    console.log(error);
-  }
-};
 
 //new add - FIXED FROM LASTEST BACKEND
 export const checkLogin = async (data) => {
   try {
     const res = await request.post_from_be("api/user/login", data);
-    console.log("is undefined: ", res);
     if(res.data) {
       return res.data;
     }
@@ -206,13 +189,65 @@ export const checkLogin = async (data) => {
 
 export const getInfoDelivery = async (customerId) => {
   try {
-    const res = await request.get(`delivery/info/${customerId}`);
-    const resultObject = JSON.parse(res);
-    return resultObject;
+    const res = await request.get_from_be(`api/address-user?userId=${customerId}`);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
   } catch (error) {
     console.log(error);
   }
 };
+
+export const editInfoDelivery = async (data) => {
+  try {
+    const res = await request.put_from_be("api/address-user/edit", data);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const addInfoDelivery = async (data) => {
+  try {
+    const res = await request.post_from_be("api/address-user/create", data);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const removeInfoDelivery = async (id) => {
+  try {
+    const res = await request.delete_from_be(`api/address-user/delete?id=${id}`);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const addOrderForUser = async (data) => {
+  try {
+    const res = await request.post_from_be("api/order/create", data);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+
 
 export const getOrderDetail = async (customerId) => {
   try {
@@ -307,16 +342,6 @@ export const updateCartCustomer = async (data, customerId) => {
     const res = await request.patch(`customerCarts/${customerId}/cart`, {
       cart: data,
     });
-    return res;
-  } catch (error) {
-    console.log(error);
-  }
-};
-//DELETE
-// DELETE
-export const deleteCart = async (cartId, productId) => {
-  try {
-    const res = await request.remove(`cart/remove?cartId=${cartId}&productId=${productId}`);
     return res;
   } catch (error) {
     console.log(error);

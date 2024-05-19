@@ -4,15 +4,15 @@
     <div class="container">
       <div class="row">
         <div
-          v-for="product in newList"
-          :key="product.id"
+          v-for="(item, index) in per_page"
+          :key="item.id"
           class="col-md-4 col-lg-3 col-sm-6 padding-row"
         >
           <ItemProduct
-            :pic="product.pic[0]"
-            :name="product.name"
-            :price="product.price"
-            :id="product.id"
+            :pic="newList?.[index]?.images?.[0]?.image"
+            :name="newList?.[index]?.name"
+            :price="newList?.[index]?.discountPrice"
+            :id="newList?.[index]?.id"
             @productClick="handleProductClick"
           />
         </div>
@@ -23,6 +23,7 @@
         @click="loadMore"
         class="btn-view-products"
         :class="{ 'disabled-btn': disableButton }"
+        v-if="per_page < newList.length"
       >
         View More Products
       </button>
@@ -37,35 +38,46 @@ import { useCounterStore } from "@/stores/index";
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 const counterStore = useCounterStore();
-const listProducts = ref([]);
+// const listProducts = ref([]);
 const disableButton = ref(false);
 const page = ref(0);
 const newList = ref([]);
 const router = useRouter();
+const per_page = ref(1);
+// const count = ref(0)
 
 const handleProductClick = (productId) => {
   console.log("Product ID clicked:", productId);
   router.push({ name: "ProductDetail", params: { id: productId} });
 };
-const updateList = async () => {
-  page.value++;
-  await counterStore.fetchListProduct(page.value);
-  listProducts.value = counterStore.listProducts;
-  console.log(listProducts.value);
-  if (listProducts.value.length > 0) {
-    newList.value = newList.value.concat(listProducts.value);
-    disableButton.value = false;
-  } else {
-    disableButton.value = true;
-  }
-};
+// const updateList = async () => {
+//   page.value++;
+//   await counterStore.fetchListProduct(page.value);
+//   listProducts.value = counterStore.listProducts;
+//   if (listProducts.value.length > 0) {
+//     newList.value = newList.value.concat(listProducts.value);
+//     disableButton.value = false;
+//   } else {
+//     disableButton.value = true;
+//   }
+// };
 onMounted(async () => {
   await counterStore.fetchListProduct(page.value);
   newList.value = counterStore.listProducts;
-  console.log(newList.value);
+  if(newList.value.length < per_page.value)
+  {
+    per_page.value = newList.value.length;
+  }
 });
 const loadMore = () => {
-  updateList();
+  // updateList();
+  const result = newList.value.length - per_page.value;
+  if(result > 1) {
+    per_page.value = per_page.value + 1;
+  }
+  else {
+    per_page.value = per_page.value + result;
+  }
 };
 </script>
 

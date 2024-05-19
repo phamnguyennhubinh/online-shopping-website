@@ -17,7 +17,7 @@
 <script setup>
 import {
   PieChartOutlined,
-  DesktopOutlined
+  DesktopOutlined, BulbOutlined, SettingOutlined
 } from '@ant-design/icons-vue';
 const props = defineProps({
   collapsed: {
@@ -32,16 +32,19 @@ const LIST_MENU = [
     key: "1",
     path: "/home",
     name: "Tổng quan",
+    icon: PieChartOutlined
   },
   {
     key: "2",
     path: "/products",
     name: "Sản Phẩm",
+    icon: DesktopOutlined
   },
   {
     key: "3",
     path: "/orders",
     name: "Đơn Hàng",
+    icon: BulbOutlined
   },
   // {
   //   key: "4",
@@ -52,6 +55,7 @@ const LIST_MENU = [
     key: "5",
     path: "/settings",
     name: "Cài Đặt",
+    icon: SettingOutlined
   }
 ]
 </script>

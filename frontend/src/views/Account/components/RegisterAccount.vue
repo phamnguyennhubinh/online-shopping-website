@@ -149,7 +149,7 @@ const router = useRouter();
 const formRef = ref(null);
 // const arrayNew = ref([]);
 onMounted(async () => {
-  await counterStore.fetchListAccounts();
+  // await counterStore.fetchListAccounts();
   localStorage.setItem("listAcc", JSON.stringify(counterStore.getListAcc));
 });
 // const randomId = ref(generateRandomId()); // comma

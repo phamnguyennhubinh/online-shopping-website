@@ -2,7 +2,7 @@
   <div class="text-end mb-2">
     <a-button type="primary" @click="showModal">Add new brand</a-button>
   </div>
-  <a-table :dataSource="listColor" :columns="columns">
+  <a-table :dataSource="listColor" :columns="columns" :scroll="{ x: '100%', y: 250 }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.key === 'operation'">
         <EditOutlined style="margin-right: 5px; cursor: pointer;" @click="showModal(event, record)" />

@@ -18,6 +18,7 @@ import store from "./stores";
 import { createPinia } from "pinia";
 import axios from "axios";
 window.axios = axios;
+// const isAdminRoute = window.location.pathname.startsWith('/admin');
 createApp(App)
   .use(createPinia())
   .use(router)

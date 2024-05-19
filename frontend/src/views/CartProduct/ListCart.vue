@@ -1,68 +1,71 @@
 <template>
-  <section id="product">
-    <h1 class="text-align-center">LIST CARTS</h1>
-    <div class="grid container border">
-      <div class="col-md-4 col-sm-4 position-relative">
-        <span class="text-align-left-absolute">
-          <!-- <a-checkbox
+  <div>
+    <section id="product">
+      <h1 class="text-align-center">LIST CARTS</h1>
+      <div class="grid container border">
+        <div class="col-md-4 col-sm-4 position-relative">
+          <span class="text-align-left-absolute">
+            <!-- <a-checkbox
          v-model:checked="checked"
          @change="handleCheckAllChange"
        >
        &ensp;
        </a-checkbox> -->
-          <input
-            type="checkbox"
-            id="myCheck"
-            @change="selectAll"
-            @click="handleCheckAllChange()"
-            v-model="checkboxCart"
-          />
-        </span>
+            <input
+              type="checkbox"
+              id="myCheck"
+              @change="selectAll"
+              @click="handleCheckAllChange()"
+              v-model="checkboxCart"
+            />
+          </span>
 
-        <span class="left-absolute">Sản phẩm</span>
+          <span class="left-absolute">Sản phẩm</span>
+        </div>
+        <div class="col-md-2 col-sm-2">Đơn giá</div>
+        <div class="col-md-2 col-sm-2">Số lượng</div>
+        <div class="col-md-2 col-sm-2">Số tiền</div>
+        <div class="col-md-2 col-sm-2">Thao tác</div>
       </div>
-      <div class="col-md-2 col-sm-2">Đơn giá</div>
-      <div class="col-md-2 col-sm-2">Số lượng</div>
-      <div class="col-md-2 col-sm-2">Số tiền</div>
-      <div class="col-md-2 col-sm-2">Thao tác</div>
-    </div>
-    <div
-      class="grid container card"
-      style="margin-top: 40px"
-      v-for="cart in counterStore.listCarts"
-      :key="cart.id"
-    >
-      <div class="row">
-        <CartItem
-          :pic="cart.pic"
-          :name="cart.name"
-          :price="cart.price"
-          :id="cart.id"
-          :quantity="cart.quantity"
-          :status="cart.status"
-          @updateStatus="updateStatus"
-          @delete="deleteCart"
-          @addOrder="addOrder"
-          v-model:checkboxCart="checkboxCart"
-        />
+      <div
+        class="grid container card"
+        style="margin-top: 40px"
+        v-for="cart in counterStore.listCarts"
+        :key="cart.id"
+      >
+        <div class="row">
+          <CartItem
+            :pic="cart.image"
+            :color="cart.color"
+            :sizeId="cart.sizeId"
+            :name="cart.name"
+            :price="cart.discountPrice"
+            :id="cart.id"
+            :quantity="cart.quantity"
+            :status="cart.status"
+            @updateStatus="updateStatus"
+            @delete="deleteCart"
+            @addOrder="addOrder"
+            v-model:checkboxCart="checkboxCart"
+          />
+        </div>
       </div>
-    </div>
-    <div class="container">
-      <!-- <div class="row margin-top-30">
+      <div class="container">
+        <!-- <div class="row margin-top-30">
        <div class="col-md-10 right"><span class="font-color">Total</span></div>
        <div class="col-md-2">
          <span class="backgr">${{ totalCart }}</span>
        </div>
      </div> -->
-      <div class="text-align-center">
-        <span class="font-color">Total: </span
-        ><span class="backgr">${{ totalCart }}</span>
+        <!-- <div class="text-align-center">
+          <span class="font-color">Total: </span
+          ><span class="backgr">{{ totalCart }} VND</span>
+        </div> -->
       </div>
-    </div>
-  </section>
-  <section id="totalBill" :class="{ hidden: hidden }">
-    <div class="row border2 background">
-      <!-- <div class="col">
+    </section>
+    <section id="totalBill" :class="{ hidden: hidden }">
+      <div class="row border2 background">
+        <!-- <div class="col">
         <input
           type="checkbox"
           id="checkFixed"
@@ -72,22 +75,22 @@
         />
         <span>&nbsp;&nbsp;Chọn tất cả</span>
       </div> -->
-      <div class="col">
-        <div>Tổng thanh toán</div>
-        <div>({{ computedValue.countPro }} sản phẩm)</div>
+        <div class="col">
+          <div>Tổng thanh toán</div>
+          <div>({{ computedValue.countPro }} sản phẩm)</div>
+        </div>
+        <div class="col">
+          <span class="color-price">{{ computedValue.billEach }} VND</span>
+          <!-- totalCart computedValue.billEach totalBillBottom -->
+        </div>
+        <div class="col" id="order">
+          <router-link :to="{ name: 'PurchaseProducts' }">
+            <button :hidden="hidden" class="btn btn-add">Mua Hàng</button>
+          </router-link>
+        </div>
       </div>
-      <div class="col">
-        <span class="color-price">${{ computedValue.billEach }}</span>
-        <!-- totalCart computedValue.billEach totalBillBottom -->
-      </div>
-      <div class="col" id="order">
-        <router-link :to="{ name: 'PurchaseProducts' }">
-          <button :hidden="hidden" class="btn btn-add">Mua Hàng</button>
-        </router-link>
-      </div>
-    </div>
-  </section>
-  <router-view />
+    </section>
+  </div>
 </template>
 
 <script setup>
@@ -131,7 +134,7 @@ watch(
         console.log(counterStore.listCarts);
       }
 
-      // hidden.value = true;
+      hidden.value = true;
     }
   }
 );
@@ -139,8 +142,6 @@ watch(
   () => counterStore.listCarts,
   (newValue, oldValue) => {
     // Đây là nơi xử lý khi có sự thay đổi trong counterStore.listCarts
-    console.log("New value:", newValue);
-    console.log("Old value:", oldValue);
     update.value = oldValue;
     // Gọi hàm hoặc thực hiện các hành động khác cần thiết khi có sự thay đổi
     // Ví dụ: computedValue.refresh(); // Cập nhật giá trị computed
@@ -150,9 +151,9 @@ watch(
 onMounted(async () => {
   // Lấy danh sách cart từ localStorage
   const idTemp = JSON.parse(localStorage.getItem("idCustomer"));
-  console.log("This is cart:", idTemp);
   await counterStore.fetchListCustomerCart(idTemp);
   const storedCarts = counterStore.getListCart || [];
+  localStorage.setItem("cart", JSON.stringify(storedCarts));
   // Thêm biến status: true vào mỗi object
   if (storedCarts) {
     counterStore.listCarts = storedCarts.map((cart) => ({
@@ -160,17 +161,14 @@ onMounted(async () => {
       status: false,
     }));
   }
-  console.log(counterStore.listCarts);
   localStorage.removeItem("addCart");
-  console.log(counterStore.listCarts);
   counterStore.totalBill();
   localStorage.setItem("statusCheck", JSON.stringify(2));
-});
+})
 
 const updateStatus = (newStatus, productId) => {
   localStorage.setItem("statusCheck", JSON.stringify(2));
-  console.log(newStatus);
-  const storedCarts = counterStore.getListCart.cart;
+  const storedCarts = counterStore.getListCart;
   if (newStatus === true) {
     hidden.value = false;
   } else {
@@ -236,11 +234,12 @@ const computedValue = computed(() => {
   return { billEach: totalBill, countPro: count };
 });
 
-const deleteCart = async (productId) => {
-  await counterStore.removeCart(productId);
+const deleteCart = async (cartId) => {
+  counterStore.listCarts = counterStore.listCarts.reduce((item) => item.id);
+  await counterStore.removeCart(cartId);
 };
 
-const totalCart = computed(() => counterStore.totalBill());
+// const totalCart = computed(() => counterStore.totalBill());
 
 const handleCheckAllChange = () => {
   selectAll();

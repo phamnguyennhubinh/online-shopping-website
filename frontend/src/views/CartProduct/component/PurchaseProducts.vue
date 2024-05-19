@@ -10,10 +10,7 @@
       <div>
         <div class="margin-left">
           <span :hidden="!hiddenInfo"
-            ><b>{{ getInfoDeliver.name }}&ensp;{{ getInfoDeliver.phone }}</b>
-            &ensp;<br class="displayForRes" />{{
-              getInfoDeliver.arrInfoDeliver
-            }}&ensp;&ensp;
+            ><b>&ensp;</b> &ensp;<br class="displayForRes" />&ensp;&ensp;
           </span>
           <span :hidden="hiddenInfo"
             ><b>{{ name }}&ensp;{{ phone }}</b> &ensp;<br
@@ -107,63 +104,26 @@
                   />
                 </a-form-item>
               </a-col>
-            </a-row>
-            <a-row :gutter="16">
-              <a-col :span="8">
-                <a-form-item label="City" name="city">
-                  <a-select
-                    v-model:value="form.city"
-                    @change="loadDistricts"
-                    placeholder="Choose your city"
-                  >
-                    <a-select-option
-                      v-for="city in cities"
-                      :key="city.code"
-                      :value="city.code"
-                      >{{ city.name }}</a-select-option
-                    >
-                  </a-select>
-                </a-form-item>
-              </a-col>
-              <a-col :span="8">
-                <a-form-item label="District" name="district">
-                  <a-select
-                    v-model:value="form.district"
-                    @change="loadWards"
-                    placeholder="Choose your district"
-                  >
-                    <!-- <a-select-option value="" selected
-                     ></a-select-option
-                   > -->
-                    <a-select-option
-                      v-for="district in districts"
-                      :key="district.code"
-                      :value="district.code"
-                      >{{ district.name }}</a-select-option
-                    >
-                  </a-select>
-                </a-form-item>
-              </a-col>
-              <a-col :span="8">
-                <a-form-item label="Ward" name="ward">
-                  <a-select
-                    v-model:value="form.ward"
-                    @change="printResult"
-                    placeholder="Choose your ward"
-                  >
-                    <a-select-option
-                      v-for="ward in wards"
-                      :key="ward.code"
-                      :value="ward.code"
-                      >{{ ward.name }}</a-select-option
-                    >
-                  </a-select>
+              <a-col :span="12">
+                <a-form-item
+                  label="Email:"
+                  name="email"
+                  :rules="[
+                    { required: true, message: 'Please input your email!' },
+                    {
+                      type: 'email',
+                      message: 'Please enter a valid email address',
+                      trigger: ['blur', 'change'],
+                    },
+                  ]"
+                >
+                  <a-input v-model:value="form.email" class="border-none" />
                 </a-form-item>
               </a-col>
             </a-row>
             <a-row :gutter="16">
               <a-col :span="24">
-                <a-form-item label="Specific address" name="specificAddress">
+                <a-form-item label="Address" name="specificAddress">
                   <a-input
                     v-model:value="form.specificAddress"
                     placeholder="Please enter your specific address"
@@ -171,7 +131,7 @@
                 </a-form-item>
               </a-col>
             </a-row>
-            <a-row :gutter="16">
+            <!-- <a-row :gutter="16">
               <a-col :span="24">
                 <a-form-item label="Description" name="description">
                   <a-textarea
@@ -181,7 +141,7 @@
                   />
                 </a-form-item>
               </a-col>
-            </a-row>
+            </a-row> -->
           </a-form>
           <template #extra>
             <a-space>
@@ -207,12 +167,14 @@
       >
         <hr />
         <div class="col-md-3 col-sm-3">
-          <img class="pictureCart" :src="item.pic[0]" />
+          <img class="pictureCart" :src="item.image" />
         </div>
         <div class="col-md-3 col-sm-3">{{ item.name }}</div>
-        <div class="col-md-2 col-sm-2">${{ item.price }}</div>
+        <div class="col-md-2 col-sm-2">{{ item.discountPrice }} VND</div>
         <div class="col-md-2 col-sm-2">{{ item.quantity }}</div>
-        <div class="col-md-2 col-sm-2">${{ item.price * item.quantity }}</div>
+        <div class="col-md-2 col-sm-2">
+          {{ item.discountPrice * item.quantity }} VND
+        </div>
       </div>
     </div>
     <hr />
@@ -228,36 +190,28 @@
         <div class="col-md-6 col-sm-6 font-color-title">
           <span class="color-shipping">Đơn vị vận chuyển: &ensp; </span>
           <a-select
-            v-model:value="value2"
+            v-model:value="selectTypeShip"
             class="width-option"
             :dropdown-match-select-width="false"
             :placement="placement"
+            :options="getTypeShip"
+            @change="typeShipChange"
           >
-            <a-select-option value="HangZhou">Nhanh</a-select-option>
-            <a-select-option value="NingBo">Hỏa tốc</a-select-option>
           </a-select>
-          <span class="hidden-res"
-            >&ensp;&ensp;Nhận hàng vào ngày 24/11 đến 26/11</span
-          >
+          <div>{{ date_ship }}</div>
           <div>Được đồng kiểm</div>
-          <div>Tổng số tiền: ${{ counterStore.billOrder }}</div>
+          <div>Phí vận chuyển: {{ price_ship }} VND</div>
         </div>
       </div>
     </div>
     <hr class="hidden-res" />
     <hr />
-    <!-- <div class="display-grid text-align-right font-color-title">
-           <h6 class="ajust bawp">Tổng tiền hàng</h6>
-           <div class="bawp">$14000</div>
-       <div class=" margin-top">Phí vân chuyển:&emsp;  $14000</div>
-       <div class="margin-top">Tổng thanh toán:&emsp;  <span class="totalBill">$14000</span></div>
-   </div> -->
     <div class="row margin-top-15 middle-center">
       <div class="col-md-10 col-sm-10" style="text-align: right">
         <span>Tổng tiền hàng:</span>
       </div>
       <div class="col-md-2 col-sm-2">
-        <span>${{ counterStore.billOrder }}</span>
+        <span>{{ counterStore.billOrder }} VND</span>
       </div>
     </div>
     <div class="row margin-top-15 middle-center">
@@ -265,7 +219,7 @@
         <span>Phí vận chuyển:</span>
       </div>
       <div class="col-md-2 col-sm-2">
-        <span>${{ ship }}</span>
+        <span>{{ price_ship }} VND</span>
       </div>
     </div>
     <div class="row margin-top-15 middle-center">
@@ -273,12 +227,14 @@
         <span>Tổng thanh toán:</span>
       </div>
       <div class="col-md-2 col-sm-2">
-        <span class="totalBill">${{ ship + counterStore.billOrder }}</span>
+        <span class="totalBill"
+          >{{ price_ship + counterStore.billOrder }} VND</span
+        >
       </div>
     </div>
     <hr />
     <div class="text-align-right">
-      <router-link :to="{ name: 'LayoutPage' }">
+      <!-- <router-link :to="{ name: 'LayoutPage' }"> -->
         <button
           class="btn-order"
           @click="addOrder"
@@ -286,39 +242,75 @@
         >
           Đặt hàng
         </button>
-      </router-link>
+      <!-- </router-link> -->
     </div>
   </section>
-  <router-view />
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from "vue";
+import { ref, reactive, onMounted, computed } from "vue";
 import { useCounterStore } from "@/stores";
-import axios from "axios";
+import router from '@/router';
+// import axios from "axios";
 import { message } from "ant-design-vue";
-const host = "https://provinces.open-api.vn/api/";
-const cities = ref([]);
-const districts = ref([]);
-const wards = ref([]);
-const result = ref("");
 const status = ref("Thay đổi");
 const name = ref();
 const phone = ref();
 const arraySelect = ref();
 const hiddenInfo = ref(true);
+const getTypeShip = ref([]);
+const selectTypeShip = ref();
+// const date_ship = ref("")
+const price_ship = ref(0);
 
+const typeShipChange = (value) => {
+  // var today = new Date();
+  // var date = (count_day) => {
+  //   return (today.getDate() + count_day) +
+  //       "-" +
+  //       (today.getMonth() + 1) +
+  //       "-" +
+  //       today.getFullYear();
+  // }
+
+  // if(selectTypeShip.value === 1)
+  // {
+  //   const day = date(0)
+  //   date_ship.value = `Bạn sẽ nhận hàng vào ngày ${day}`;
+
+  // } else if (selectTypeShip.value === 2)
+  // {
+  //   const day_start = date(2)
+  //   const day_end = date(4)
+  //   date_ship.value = `Bạn sẽ nhận hàng từ ngày ${day_start} đến ngày ${day_end}`;
+  // } else {
+  //   const day_start = date(3)
+  //   const day_end = date(5)
+  //   date_ship.value = `Bạn sẽ nhận hàng từ ngày ${day_start} đến ngày ${day_end}`;
+  // }
+  for (let i = 0; i < counterStore.getAllTypeShip.length; i++) {
+    if (counterStore.getAllTypeShip[i].id === value) {
+      price_ship.value = counterStore.getAllTypeShip[i].price;
+      return;
+    }
+  }
+};
 onMounted(async () => {
-  callAPI(`${host}?depth=1`);
+  const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
   counterStore.productTicked();
-  console.log(counterStore.arrTicked);
-  console.log(counterStore.listCarts);
+  await counterStore.getTypeShip();
+  await counterStore.fetchInfoDelivery(idCustom);
+  for (let i = 0; i < counterStore.getAllTypeShip.length; i++) {
+    getTypeShip.value.push({
+      label: counterStore.getAllTypeShip[i].type,
+      value: counterStore.getAllTypeShip[i].id,
+    });
+  }
   counterStore.totalBillOrder();
-  const cusId = JSON.parse(localStorage.getItem("idCustomer"));
-  await counterStore.fetchInfoDelivery(cusId);
-  console.log(counterStore.getListInfo);
+  // const cusId = JSON.parse(localStorage.getItem("idCustomer"));
+  // await counterStore.fetchInfoDelivery(cusId);
   try {
-    await counterStore.fetchOrderById(cusId);
+    // await counterStore.fetchOrderById(cusId);
   } catch (error) {
     console.log("Khách hàng này chưa có đơn hàng!");
   }
@@ -334,58 +326,31 @@ const displayButon = computed(() => {
   }
   return { hiddenButton: status };
 });
-const callAPI = (api) => {
-  axios.get(api).then((response) => {
-    cities.value = response.data;
-  });
-};
 const optionsOne = computed(() => {
   return counterStore.getListInfo.map((info) => ({
     value: info.id, // Giả sử id là giá trị duy nhất cho mỗi option
-    label: `${info.name}, ${info.phone}, ${info.district}, ${info.city}, ${info.ward}`, // Sử dụng một trường nào đó từ info để làm label
+    label: `${info.shipName}, ${info.shipPhoneNumber}, ${info.shipAddress}`, // Sử dụng một trường nào đó từ info để làm label
   }));
 });
 const focus = () => {
-  console.log("focus");
+  // console.log("focus");
 };
-const handleDelete = () => {
-  if (
-    form.name === "" ||
-    form.phone === "" ||
-    form.city === "" ||
-    form.district === "" ||
-    form.ward === "" ||
-    form.specificAddress === ""
-  ) {
+const handleDelete = async () => {
+  if (!valueOne.value) {
     message.error("Vui lòng chọn 1 địa chỉ mà bạn muốn xoá!");
   } else {
-    const indexToUpdate = counterStore.getListInfo.findIndex(
-      (item) => item.id === counterStore.valueSelect
-    );
-    counterStore.getListInfo.splice(indexToUpdate, 1);
-    const cusId = JSON.parse(localStorage.getItem("idCustomer"));
-    if (indexToUpdate !== -1) {
-      axios
-        .patch(`http://localhost:3000/infoDelivery/${cusId}`, {
-          id: cusId,
-          info: counterStore.getListInfo,
-        })
-        .then((response) => {
-          console.log(response.data);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+    const result = await counterStore.deleteAddressUser(valueOne.value);
+    if (result.statusCode === 200) {
+      message.success("Đã xoá thành công địa chỉ!");
+      resetForm()
     } else {
-      console.log(`Item with id ${counterStore.valueSelect} not found`);
+      message.error("Something was wrong. Please try it again later.");
     }
-    form.name = "";
-    form.phone = "";
-    form.city = "";
-    form.district = "";
-    form.ward = "";
-    form.specificAddress = "";
-    form.description = "";
+    // const indexToUpdate = counterStore.getListInfo.findIndex(
+    //   (item) => item.id === counterStore.valueSelect
+    // );
+    // counterStore.getListInfo.splice(indexToUpdate, 1);
+    // const cusId = JSON.parse(localStorage.getItem("idCustomer"))
     onClose();
   }
 };
@@ -394,19 +359,14 @@ const handSelect = (value) => {
   const selectedInfo = counterStore.getListInfo.find(
     (info) => info.id === value
   );
-  form.name = selectedInfo.name;
-  form.phone = selectedInfo.phone;
-  form.city = selectedInfo.city;
-  form.district = selectedInfo.district;
-  form.ward = selectedInfo.ward;
-  form.specificAddress = selectedInfo.specificAddress;
-  form.description = selectedInfo.description;
-
+  form.name = selectedInfo.shipName;
+  form.phone = selectedInfo.shipPhoneNumber;
+  form.email = selectedInfo.shipEmail;
+  form.specificAddress = selectedInfo.shipAddress;
   valueOne.value = selectedInfo.id;
 };
 
 const handleChange = (value) => {
-  console.log(`selected ${value}`);
   counterStore.valueSelect = value;
   const selectedInfo = counterStore.getListInfo.find(
     (info) => info.id === value
@@ -415,109 +375,25 @@ const handleChange = (value) => {
   // Cập nhật giá trị cho các trường input
   form.name = selectedInfo.name;
   form.phone = selectedInfo.phone;
-  form.city = selectedInfo.city;
-  form.district = selectedInfo.district;
-  form.ward = selectedInfo.ward;
   form.specificAddress = selectedInfo.specificAddress;
-  form.description = selectedInfo.description;
+  // form.description = selectedInfo.description;
 
   // Cập nhật lại giá trị của valueOne để hiển thị trên <a-select>
   valueOne.value = selectedInfo.id;
 };
 
 const handleClear = () => {
-  form.name = "";
-  form.phone = "";
-  form.city = "";
-  form.district = "";
-  form.ward = "";
-  form.specificAddress = "";
-  form.description = "";
-  // handleSubmit();
+  resetForm();
 };
 
-// const handleAdd = () => {
-//   if (
-//     form.name === "" ||
-//     form.phone === "" ||
-//     form.city === "" ||
-//     form.district === "" ||
-//     form.ward === "" ||
-//     form.specificAddress === ""
-//   ) {
-//     message.error("Vui lòng nhập đầy đủ thông tin!");
-//   } else {
-//     var today = new Date();
-//     var date =
-//       today.getDate() +
-//       "-" +
-//       (today.getMonth() + 1) +
-//       "-" +
-//       today.getFullYear();
-//     var time =
-//       today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
-//     const customerId = JSON.parse(localStorage.getItem("idCustomer"));
-//     let count = counterStore.getListInfo.length;
-//     formRef.value.validate().then((valid) => {
-//       if (valid) {
-//         const arrForm = {
-//           id: count++,
-//           name: form.name,
-//           phone: form.phone,
-//           city: getCityName(),
-//           district: getDistrictName(),
-//           ward: getWardName(),
-//           specificAddress: form.specificAddress,
-//           description: form.description,
-//           dateCreate: date + " " + time,
-//         };
-//         counterStore.getListInfo.push(arrForm);
-//         const arrFinal = {
-//           id: customerId,
-//           info: counterStore.getListInfo,
-//         };
-//         console.log(arrFinal);
-//         console.log(counterStore.getListInfo);
-//         if (counterStore.getListInfo.length !== 0) {
-//           // counterStore.removeInfoDelivery(customerId);
-//           axios
-//             .patch(`http://localhost:3000/infoDelivery/${customerId}`, {
-//               id: customerId,
-//               info: counterStore.getListInfo,
-//             })
-//             .then((response) => {
-//               console.log(response.data);
-//             })
-//             .catch((error) => {
-//               console.error(error);
-//             });
-//           message.success("Đã thêm địa chỉ thành công!");
-//           console.log("Đây là if");
-
-//         } else {
-//           // counterStore.addInfoDelivery(arrFinal);
-//           message.success("Đã thêm địa chỉ thành công!");
-//           console.log("Đây là else");
-//           counterStore.addInfoDeliveryOrderNone(arrFinal);
-//         }
-//         // onClose();
-//       } else {
-//         console.log("Form is not valid");
-//       }
-//     });
-//   }
-// };
 const checkInfoExist = () => {
-  console.log(counterStore.getListInfo);
   let statusExist = false;
   for (let i = 0; i < counterStore.getListInfo.length; i++) {
     if (
-      counterStore.getListInfo[i].name === form.name &&
-      counterStore.getListInfo[i].phone === form.phone &&
-      counterStore.getListInfo[i].specificAddress === form.specificAddress &&
-      counterStore.getListInfo[i].district === form.district &&
-      counterStore.getListInfo[i].city === form.city &&
-      counterStore.getListInfo[i].ward === form.ward
+      counterStore.getListInfo[i].shipName === form.name &&
+      counterStore.getListInfo[i].shipPhoneNumber === form.phone &&
+      counterStore.getListInfo[i].shipAddress === form.specificAddress &&
+      counterStore.getListInfo[i].shipEmail === form.email 
     ) {
       statusExist = true;
     } else {
@@ -527,62 +403,36 @@ const checkInfoExist = () => {
   return statusExist;
 };
 
-const handleUpdate = () => {
-  if (
-    form.name === "" ||
-    form.phone === "" ||
-    form.city === "" ||
-    form.district === "" ||
-    form.ward === "" ||
-    form.specificAddress === ""
-  ) {
+const handleUpdate = async () => {
+  if (form.name === "" || form.phone === "" || form.specificAddress === "") {
     message.error("Vui lòng chọn 1 địa chỉ mà bạn muốn sửa đổi!");
   } else {
     if (checkInfoExist === true) {
       message.error("Địa chỉ này đã tồn tại!");
     } else {
-      console.log(counterStore.getListInfo);
       const indexToUpdate = counterStore.getListInfo.findIndex(
         (item) => item.id === counterStore.valueSelect
       );
-      var today = new Date();
-      var date =
-        today.getDate() +
-        "-" +
-        (today.getMonth() + 1) +
-        "-" +
-        today.getFullYear();
-      var time =
-        today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
       // const indexToUpdate = counterStore.getListInfo[findIndex]
       if (indexToUpdate !== -1) {
         // Create the updated object
-        counterStore.getListInfo[indexToUpdate] = {
+
+        const data = {
           id: counterStore.valueSelect,
-          name: form.name,
-          phone: form.phone,
-          city: form.city,
-          district: form.district,
-          ward: form.ward,
-          specificAddress: form.specificAddress,
-          description: form.description,
-          dateCreate: date + " " + time,
+          shipName: form.name,
+          shipPhoneNumber: form.phone,
+          shipEmail: form.email,
+          shipAddress: form.specificAddress,
         };
-        const cusId = JSON.parse(localStorage.getItem("idCustomer"));
-        // Use Axios to send a PATCH request to update the data
-        axios
-          .patch(`http://localhost:3000/infoDelivery/${cusId}`, {
-            id: cusId,
-            info: counterStore.getListInfo,
-          })
-          .then((response) => { 
-            console.log(response.data);
-          })
-          .catch((error) => {
-            console.error(error);
-          });
-          message.success("Updated!")
-          onClose();
+        const result = await counterStore.editAddressUser(data);
+        if (result.statusCode === 200) {
+          message.success("Updated!");
+        }
+        // const cusId = JSON.parse(localStorage.getItem("idCustomer"));
+        else {
+          message.error("Something went wrong. Please comback later!");
+        }
+        onClose();
       } else {
         console.log(`Item with id ${counterStore.valueSelect} not found`);
       }
@@ -594,17 +444,14 @@ const handleUpdate = () => {
 // const arr = ref([]);
 
 const counterStore = useCounterStore();
-const value2 = ref("HangZhou");
-const ship = ref(15);
+// const ship = ref(15);
 // const formDataArray = ref([]);
 const form = reactive({
   name: "",
-  city: "",
   phone: "",
-  district: "",
-  ward: "",
+  email: "",
   specificAddress: "",
-  description: "",
+  // description: "",
 });
 const rules = {
   name: [
@@ -625,12 +472,12 @@ const rules = {
       message: "Please choose your specific address",
     },
   ],
-  // description: [
-  //   {
-  //     required: true,
-  //     message: "Please enter url description",
-  //   },
-  // ],
+  email: [
+    {
+      require: true,
+      message: "Please enter your email",
+    },
+  ],
 };
 const open = ref(false);
 
@@ -639,88 +486,53 @@ const showDrawer = () => {
 };
 
 const onClose = () => {
-  // open.value = false;
+  resetForm()
   if (formRef.value) {
     open.value = false;
   }
-  // form.name = "";
-  // form.phone = "";
-  // form.city = "";
-  // form.district = "";
-  // form.ward = "";
-  // form.specificAddress = "";
-  // form.description = "";
+  valueOne.value = ''
 };
+
+const resetForm = () => {
+  form.name = '',
+  form.email = '',
+  form.phone = '',
+  form.specificAddress = ''
+}
 
 const handleSubmit = () => {
   //  formDataArray.value = JSON.parse(localStorage.getItem("infoDelivery")) || [];
   if (
     form.name === "" ||
     form.phone === "" ||
-    form.city === "" ||
-    form.district === "" ||
-    form.ward === "" ||
+    form.email === "" ||
     form.specificAddress === ""
   ) {
     message.error("Vui lòng nhập đầy đủ thông tin!");
   } else {
     if (checkInfoExist === true) {
-      console.log(counterStore.getListInfo);
       message.error("Địa chỉ này đã tồn tại!");
     } else {
-      let count = counterStore.getListInfo.length + 1;
       const customerId = JSON.parse(localStorage.getItem("idCustomer"));
-      var today = new Date();
-      var date =
-        today.getDate() +
-        "-" +
-        (today.getMonth() + 1) +
-        "-" +
-        today.getFullYear();
-      var time =
-        today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
-      formRef.value.validate().then((valid) => {
+      formRef.value.validate().then(async (valid) => {
         if (valid) {
           const arrForm = {
-            id: count++,
-            name: form.name,
-            phone: form.phone,
-            city: getCityName(),
-            district: getDistrictName(),
-            ward: getWardName(),
-            specificAddress: form.specificAddress,
-            description: form.description,
-            dateCreate: date + " " + time,
+            userId: customerId,
+            shipName: form.name,
+            shipPhoneNumber: form.phone,
+            shipEmail: form.email,
+            shipAddress: form.specificAddress,
           };
           counterStore.getListInfo.push(arrForm);
-          const arrFinal = {
-            id: customerId,
-            info: counterStore.getListInfo,
-          };
-          console.log(arrFinal);
-          console.log("---------------------");
-          console.log(counterStore.getListInfo);
-          if (counterStore.getListInfo.length !== 1) {
-            // counterStore.removeInfoDelivery(customerId);
-            //  counterStore.addInfoDelivery(arrFinal);
-            console.log("Đã có");
-            // counterStore.addInfoDelivery(arrFinal);
-            axios
-              .patch(`http://localhost:3000/infoDelivery/${customerId}`, {
-                id: customerId,
-                info: counterStore.getListInfo,
-              })
-              .then((response) => {
-                console.log(response.data);
-              })
-              .catch((error) => {
-                console.error(error);
-              });
-            // counterStore.addInfoDeliveryOrderNone(arrFinal);
-          } else {
-            // counterStore.addInfoDelivery(arrFinal);
-            counterStore.addInfoDeliveryOrderNone(arrFinal);
+          const result = await counterStore.addAddressUser(arrForm)
+          if(result.statusCode === 200)
+          {
+            message.success("Thêm địa chỉ thành công!");
           }
+          else {
+            message.error("Something was wrong. Please comback later!");
+          }
+          resetForm();
           onClose();
         } else {
           console.log("Form is not valid");
@@ -734,9 +546,7 @@ const selectDelivery = () => {
   if (
     form.name === "" ||
     form.phone === "" ||
-    form.city === "" ||
-    form.district === "" ||
-    form.ward === "" ||
+    form.email === "" ||
     form.specificAddress === ""
   ) {
     message.error("Vui lòng chọn 1 địa chỉ!");
@@ -745,207 +555,118 @@ const selectDelivery = () => {
     const index = counterStore.getListInfo.findIndex(
       (item) => item.id === counterStore.valueSelect
     );
-    name.value = counterStore.getListInfo[index].name;
-    phone.value = counterStore.getListInfo[index].phone;
-    const arr = [];
-    arr.push(counterStore.getListInfo[index].specificAddress);
-    arr.push(counterStore.getListInfo[index].ward);
-    arr.push(counterStore.getListInfo[index].district);
-    arr.push(counterStore.getListInfo[index].city);
-    arraySelect.value = arr.join(", ");
+    name.value = counterStore.getListInfo[index].shipName;
+    phone.value = counterStore.getListInfo[index].shipPhoneNumber;
+    arraySelect.value = counterStore.getListInfo[index].shipAddress;
+    resetForm();
+    onClose();
   }
 };
 
-const getInfoDeliver = computed(() => {
-  const today = new Date();
-  // Format ngày giờ hiện tại
-  const currentDate = today.toISOString().slice(0, 19).replace("T", " ");
-
-  // Tính khoảng cách thời gian giữa ngày giờ hiện tại và dateCreate của từng đối tượng
-  // const timeDifferences = counterStore.getListInfo.map((obj) => {
-  //   const objDate = new Date(obj.dateCreate);
-  //   const difference = Math.abs(today - objDate);
-  //   return difference;
-  // });
-
-  const timeDifferences = counterStore.getListInfo.map((obj) => {
-    const objDate = new Date(obj.dateCreate.replace(/-/g, "/"));
-    const difference = Math.abs(new Date(currentDate) - objDate) / 1000; // Chuyển đơn vị sang giây
-    return difference;
-  });
-
-  // Tìm index của đối tượng có ngày giờ gần nhất
-  const indexOfNearest = timeDifferences.indexOf(Math.min(...timeDifferences));
-  console.log("============================");
-  console.log(indexOfNearest);
-
-  // Lấy đối tượng có ngày giờ gần nhất
-  const arrayTemp = counterStore.getListInfo[indexOfNearest] || [];
-
-  console.log("Ngày giờ hiện tại:", currentDate);
-  console.log("Đối tượng có ngày giờ gần nhất:", arrayTemp);
-
-  // const arrayTemp = counterStore.getListInfo || [];
-  let arrtemp = [];
-  let finalArr;
-  const arrName = arrayTemp.name || "";
-  const arrPhone = arrayTemp.phone || "";
-  if (
-    arrayTemp.specificAddress !== undefined &&
-    arrayTemp.ward !== undefined &&
-    arrayTemp.district !== undefined &&
-    arrayTemp.city !== undefined
-  ) {
-    arrtemp.push(arrayTemp.specificAddress);
-    arrtemp.push(arrayTemp.ward);
-    arrtemp.push(arrayTemp.district);
-    arrtemp.push(arrayTemp.city);
-    finalArr = arrtemp.join(", ");
-    console.log("Hello----------------------------------");
-  } else {
-    arrtemp = "";
-    finalArr = "";
-  }
-  // const finalArr = arrtemp.join(", ");
-  console.log(arrtemp);
-  // arrtemp.join(", ");
-  // const finalArr = arrtemp || "";
-
-  let arrSelect = [];
-  if (arrName !== "" && arrPhone !== "") {
-    arrSelect.push(arrName);
-    arrSelect.push(arrPhone);
-    arrSelect.push(arrtemp);
-    arrSelect.join(", ");
-  } else {
-    arrSelect = "";
-  }
-
-  const sele = arrSelect;
-  return {
-    info: counterStore.getListInfo,
-    arrInfoDeliver: finalArr,
-    name: arrName,
-    phone: arrPhone,
-    arraySelect: sele,
-  };
-});
-
 const valueOne = ref("");
 
-watch(
-  () => getInfoDeliver.value.arraySelect,
-  (newArraySelect) => {
-    valueOne.value = newArraySelect;
-  }
-);
+// watch(
+//   () => getInfoDeliver.value.arraySelect,
+//   (newArraySelect) => {
+//     valueOne.value = newArraySelect;
+//   }
+// );
 
-const addOrder = () => {
-  var today = new Date();
-  var date =
-    today.getDate() + "-" + (today.getMonth() + 1) + "-" + today.getFullYear();
-  var time =
-    today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+const addOrder = async () => {
+  if(!selectTypeShip.value)
+  {
+    message.error("Vui lòng chọn phương thức vận chuyển");
+    return
+  }
+  if(!counterStore.valueSelect) {
+    message.error('Vui lòng chọn địa chỉ');
+    return
+  }
   const idC = JSON.parse(localStorage.getItem("idCustomer"));
   let element = document.getElementById("myTextArea");
-  console.log(element.value);
-  console.log("-----------------------------------");
-  console.log(counterStore.getListOrderById);
   const arr = [];
-  // const arrOrder = []
-  for (let i = 0; i < counterStore.arrTicked.length; i++) {
+  for (let i = 0; i < counterStore.arrTicked?.length; i++) {
     const object = {
-      id: counterStore.arrTicked[i].id,
-      price: counterStore.arrTicked[i].price,
-      quantity: counterStore.arrTicked[i].quantity,
+      productId: counterStore.arrTicked?.[i]?.id,
+      quantity: counterStore.arrTicked?.[i]?.quantity,
     };
     arr.push(object);
   }
+  const index = counterStore.getListInfo.findIndex(
+      (item) => item.id === counterStore.valueSelect
+    );
   const arrOrder = {
-    idCustomer: idC,
-    orders: {
-      products: arr,
-      total: ship.value + counterStore.billOrder,
-      dateOrder: date + " " + time,
-      status: "is Pending",
-      note: element.value,
-    },
+    addressUserId: counterStore.valueSelect,
+    typeShipId: selectTypeShip.value,
+    isPaymentOnline: false,
+    arrDataShopCart: arr,
+    userId: idC,
+    note: element.value,
+    shipName: counterStore.getListInfo[index]?.shipName ,
+    shipAddress:counterStore.getListInfo[index]?.shipAddress ,
+    shipEmail: counterStore.getListInfo[index]?.shipEmail ,
+    shipPhoneNumber: counterStore.getListInfo[index]?.shipPhoneNumber ,
   };
-  counterStore.addOrderDetail(arrOrder);
-  console.log(arrOrder);
-  message.success("Đặt hàng thành công!");
-  for (let i = 0; i < counterStore.listCarts.length; i++) {
+  const result = await counterStore.createOrder(arrOrder);
+  if(result.statusCode === 200)
+  {
+    message.success("Đặt hàng thành công!");
+    router.push('/order-tracking');
+    for (let i = 0; i < counterStore.listCarts.length; i++) {
     for (let j = 0; j < counterStore.arrTicked.length; j++) {
       if (counterStore.listCarts[i].id === counterStore.arrTicked[j].id) {
         counterStore.listCarts.splice(i, 1); //xóa hết phần tử counterStore.listCart[i]
       }
     }
   }
-  localStorage.setItem("updateCart", JSON.stringify(counterStore.listCarts));
-  console.log(counterStore.listCarts);
-  counterStore.removeCart(idC);
-  const updateCa = JSON.parse(localStorage.getItem("updateCart"));
-  const temp = { id: idC, cart: updateCa };
-  console.log(temp);
-  counterStore.addCartForAcc(temp);
+  // localStorage.setItem("updateCart", JSON.stringify(counterStore.listCarts));
+  }
+  else {
+    message.error("Something was wrong. Please comback and try it later!");
+  }
 };
 
 const formRef = ref(null);
 
-const loadDistricts = () => {
-  console.log("Selected City:", form.city);
-  callApiDistrict(`${host}p/${form.city}?depth=2`);
-  printResult();
-};
+// const loadDistricts = () => {
+//   console.log("Selected City:", form.city);
+//   callApiDistrict(`${host}p/${form.city}?depth=2`);
+//   printResult();
+// };
 
-const loadWards = () => {
-  console.log("Selected District:", form.ward);
-  callApiWard(`${host}d/${form.district}?depth=2`);
-  printResult();
-};
+// const loadWards = () => {
+//   console.log("Selected District:", form.ward);
+//   callApiWard(`${host}d/${form.district}?depth=2`);
+//   printResult();
+// };
 
-const callApiDistrict = (api) => {
-  axios.get(api).then((response) => {
-    districts.value = response.data.districts;
-  });
-};
+// const callApiDistrict = (api) => {
+//   axios.get(api).then((response) => {
+//     districts.value = response.data.districts;
+//   });
+// };
 
-const callApiWard = (api) => {
-  axios.get(api).then((response) => {
-    wards.value = response.data.wards;
-  });
-};
+// const callApiWard = (api) => {
+//   axios.get(api).then((response) => {
+//     wards.value = response.data.wards;
+//   });
+// };
 
-const printResult = () => {
-  // if (
-  //   selectedCity.value !== "" &&
-  //   selectedDistrict.value !== "" &&
-  //   selectedWard.value !== ""
-  // ) {
-  //   result.value = `${getCityName()} | ${getDistrictName()} | ${getWardName()}`;
-  // }
-  console.log("Thành phố:", getCityName());
-  console.log("Quận:", getDistrictName());
-  console.log("Phường:", getWardName());
-  if (form.city !== "" && form.district !== "" && form.ward !== "") {
-    result.value = `${getCityName()} | ${getDistrictName()} | ${getWardName()}`;
-  }
-};
-
-const getCityName = () => {
-  return cities.value.find((city) => city.code === form.city)?.name || "";
-};
-
-const getDistrictName = () => {
-  return (
-    districts.value.find((district) => district.code === form.district)?.name ||
-    ""
-  );
-};
-
-const getWardName = () => {
-  return wards.value.find((ward) => ward.code === form.ward)?.name || "";
-};
+// const printResult = () => {
+//   // if (
+//   //   selectedCity.value !== "" &&
+//   //   selectedDistrict.value !== "" &&
+//   //   selectedWard.value !== ""
+//   // ) {
+//   //   result.value = `${getCityName()} | ${getDistrictName()} | ${getWardName()}`;
+//   // }
+//   console.log("Thành phố:", getCityName());
+//   console.log("Quận:", getDistrictName());
+//   console.log("Phường:", getWardName());
+//   if (form.city !== "" && form.district !== "" && form.ward !== "") {
+//     result.value = `${getCityName()} | ${getDistrictName()} | ${getWardName()}`;
+//   }
+// };
 </script>
 
 <style lang="scss" scoped>

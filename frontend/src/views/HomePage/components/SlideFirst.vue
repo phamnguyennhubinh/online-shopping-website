@@ -1,17 +1,17 @@
 <template>
   <div class="backgr1">
     <a-carousel autoplay>
-      <a-carousel-slide v-for="section in counterStore.sections" :key="section.id">
+      <a-carousel-slide v-for="content in contents" :key="content.id">
         <div class="row">
           <div class="col-md-8 col-sm-12">
               <div class="position-welcome">
-                <h1 class="title-welcome" v-html="section.title"></h1>
-                <p class="para-welcome">{{ section.content }}</p>
+                <h1 class="title-welcome" v-html="content.title"></h1>
+                <p class="para-welcome">{{ content.content }}</p>
                 <button type="button" class="btn-welcome">CONTACT US</button>
               </div>
           </div>
           <div class="col-md-4 col-sm-12">
-            <img :src="section.image" class="picture">
+            <img :src="content.image" class="picture">
           </div>
         </div>
       </a-carousel-slide>
@@ -23,7 +23,7 @@
 import { defineComponent } from 'vue';
 import { onMounted } from 'vue';
 import { Carousel, CarouselSlide } from 'ant-design-vue';
-import { useCounterStore } from "@/stores/index";
+// import { useCounterStore } from "@/stores/index";
 
 export default defineComponent({
   props:{imageURL: String, },
@@ -32,12 +32,31 @@ export default defineComponent({
     'a-carousel-slide': CarouselSlide,
   },
   setup(){
-    const counterStore = useCounterStore();
+    // const counterStore = useCounterStore();
+    const contents = [
+      {
+        id: 1,
+        title: 'Welcome To Our <br> B&H Shop',
+        content: 'Chào mừng đến với cửa hàng trực tuyến của chúng tôi! Chúng tôi hân hạnh đồng hành cùng bạn trên hành trình thời trang trực tuyến của mình. Với một loạt các sản phẩm từ các nhãn hiệu uy tín và đa dạng các phong cách, chúng tôi tự tin rằng bạn sẽ tìm thấy những món đồ ưng ý và phản ánh phong cách riêng của mình.',
+        image: 'https://png.pngtree.com/png-vector/20240206/ourmid/pngtree-male-model-striking-a-complete-posture-while-gazing-into-the-camera-png-image_11642547.png'
+      },
+      {
+        id: 2,
+        title: 'Welcome To Our <br> B&H Shop',
+        content: 'Chúng tôi rất vui mừng khi chào đón bạn đến với cửa hàng trực tuyến của chúng tôi! Với sự chăm sóc kỹ lưỡng và sự đa dạng về sản phẩm, chúng tôi cam kết mang đến cho bạn trải nghiệm mua sắm trực tuyến tốt nhất. Hãy lựa chọn những món đồ ưng ý từ góc nhìn của bạn và để chúng tôi làm phần còn lại!', 
+        image: 'https://png.pngtree.com/png-clipart/20240209/original/pngtree-bearded-male-model-striking-a-pose-in-a-fullbody-shot-against-png-image_14269646.png'
+      },
+      {
+        id: 3,
+        title: 'Welcome To Our <br> B&H Shop',
+        conten: 'Tại cửa hàng trực tuyến của chúng tôi, việc mua sắm trở nên dễ dàng hơn bao giờ hết. Với sự tiện lợi của mua sắm từ nhà, bạn có thể khám phá bộ sưu tập đa dạng của chúng tôi mọi lúc, mọi nơi. Hãy thả mình vào thế giới thời trang trực tuyến của chúng tôi và tìm kiếm những sản phẩm phù hợp với phong cách của bạn!',
+        image: 'https://png.pngtree.com/png-vector/20231116/ourmid/pngtree-relaxed-male-model-posing-with-tablet-computer-handsome-png-image_10566497.png'
+      }
+    ]
     onMounted(() => {
-    counterStore.fetchApiSlide();
     });
     return {
-      counterStore,
+      contents
     }
   }
 });

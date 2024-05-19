@@ -15,8 +15,8 @@
         <div class="row">
           <div class="col-lg-3 col-md-6 col-sm-12">
             <div class="font-footer">
-              <h5 class="font-footer-title">{{ counterStore.about.title }}</h5>
-              <p v-html="counterStore.about.content"></p>
+              <h5 class="font-footer-title">Vision</h5>
+              <p>Hướng đến chất lượng hơn số lượng</p>
             </div>
           </div>
           <div class="col-lg-3 col-md-6 col-sm-12">
@@ -32,19 +32,19 @@
           </div>
           <div class="col-lg-3 col-md-6 col-sm-12">
             <div class="font-footer">
-              <h5 class="font-footer-title">{{ counterStore.help.title }}</h5>
-              <p>{{ counterStore.help.content }}</p>
+              <h5 class="font-footer-title">Help</h5>
+              <p>Nếu có bất cứ thắc mắc nào, đừng ngần ngại và liên hệ với chúng tôi theo thông tin liên hệ bên dưới.</p>
             </div>
           </div>
           <div class="col-lg-3 col-md-6 col-sm-12">
             <div class="font-footer">
               <h5 class="font-footer-title">
-                {{ counterStore.contact.title }}
+                Contact
               </h5>
               <div id="icon" class="margin-contact-footer">
                 <a href="#" style="text-decoration: none" class="icon-contact"
                   ><i class="fa fa-map-marker">&nbsp;&nbsp;</i
-                  ><span>{{ array[0] }}</span></a
+                  ><span>43 Nguyễn Xí, phường 5, quận Bình Thạnh, TP HCM</span></a
                 >
               </div>
               <div class="margin-contact-footer">
@@ -53,12 +53,12 @@
                   href="#"
                   style="text-decoration: none"
                   class="icon-contact"
-                  ><i class="fa fa-phone">&nbsp;</i>{{ array[1] }}</a
+                  ><i class="fa fa-phone">&nbsp;</i>+02 72 3837837</a
                 >
               </div>
               <div class="margin-contact-footer">
                 <a href="#" style="text-decoration: none" class="icon-contact"
-                  ><i class="fa fa-envelope">&nbsp;</i>{{ array[2] }}</a
+                  ><i class="fa fa-envelope">&nbsp;</i>bnhclothing@gmail.com.vn</a
                 >
               </div>
             </div>
@@ -80,22 +80,27 @@ import { useCounterStore } from "@/stores/index";
 import { onMounted } from "vue";
 const counterStore = useCounterStore();
 let array = [];
+
 onMounted(async () => {
-  await counterStore.fetchApiFooterAbout();
-  await counterStore.fetchApiFooterContact();
-  await counterStore.fetchApiFooterHelp();
+  // await counterStore.fetchApiFooterAbout();
+  // await counterStore.fetchApiFooterContact();
+  // await counterStore.fetchApiFooterHelp();
   // Lặp qua mỗi phần tử trong mảng "result"
   counterStore.contact.forEach(function (item) {
     // Truy cập các trường trong từng phần tử
     var content = item.content;
 	array.push(content);
   });
-  console.log("this is contnet..", array[0]);
 });
 </script>
 
 <script>
 // import { useRoute } from 'vue-router';
+// const footer = [
+//   {
+
+//   }
+// ]
 export default {
   data(){
     return {

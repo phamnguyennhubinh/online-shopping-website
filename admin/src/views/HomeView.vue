@@ -33,9 +33,9 @@ const totalOrdersDelivered = ref(0);
 const totalOrdersCancel = ref(0);
 onMounted(async() => {
   const res = await getAllOrders();
-  const s1 = res.filter(item => item.statusOrder === 'S1').length;
-  const s2 = res.filter(item => item.statusOrder === 'S2').length;
-  const s3 = res.filter(item => item.statusOrder === 'S3').length ;
+  const s1 = res.filter(item => item.statusOrder === 'S4').length;
+  const s2 = res.filter(item => item.statusOrder === 'S6').length;
+  const s3 = res.filter(item => item.statusOrder === 'S7').length ;
   totalOrders.value = res.length;
   totalOrdersPending.value = s1;
   totalOrdersDelivered.value = s2;

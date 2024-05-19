@@ -5,6 +5,7 @@ const handleRequest = async (handler, req, res) => {
   try {
     const data = await handler(req.body);
     const statusCode = data.statusCode || 500;
+    console.log(data);
     return res.status(statusCode).json(data);
   } catch (error) {
     console.log(error);

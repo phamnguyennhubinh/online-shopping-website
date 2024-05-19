@@ -53,7 +53,10 @@ export const useCounterStore = defineStore("counter", {
     },
     async getTypeShip() {
       try {
-        return await savingServices.type_ship();
+        this.isLoading++;
+        const arr = await savingServices.type_ship();
+        this.getAllTypeShip = arr.result;
+        this.isLoading--;
       }
       catch (error) {
         console.error("Error in productTicked:", error);
@@ -64,7 +67,8 @@ export const useCounterStore = defineStore("counter", {
         this.billOrder = 0;
         for (let i = 0; i <= this.arrTicked.length; i++) {
           this.billOrder +=
-            this.arrTicked[i].price * this.arrTicked[i].quantity;
+            this.arrTicked[i].discountPrice
+            * this.arrTicked[i].quantity;
         }
         // console.log(this.arrayTicked);
       } catch (error) {
@@ -75,15 +79,13 @@ export const useCounterStore = defineStore("counter", {
       // const arr = this.listCarts;
       // localStorage.setItem("orderPending", JSON.stringify([]));
       this.arrTicked = [];
-      console.log(this.arrayTicked);
       // const count = 0;
-      for (let i = 0; i < this.listCarts.length; i++) {
+      for (let i = 0; i < this.listCarts?.length; i++) {
         if (this.listCarts[i].status === true) {
           this.arrTicked = this.arrTicked.concat(this.listCarts[i]);
           localStorage.setItem("orderPending", JSON.stringify(this.arrTicked));
         }
       }
-      console.log(this.listCarts.length);
       this.arrTicked = JSON.parse(localStorage.getItem("orderPending")) || [];
     },
 
@@ -115,7 +117,7 @@ export const useCounterStore = defineStore("counter", {
         (item) => item.id === id
       );
       const totalEach = Number(
-        this.listCarts[findIndexProductByID]?.price *
+        this.listCarts[findIndexProductByID]?.discountPrice *
           this.listCarts[findIndexProductByID]?.quantity
       );
       return totalEach;
@@ -143,7 +145,7 @@ export const useCounterStore = defineStore("counter", {
       // const arrr = {id: idCustom, cart: this.listCarts};
       // await this.addCartForAcc(arrr);
     },
-    async increaseQuantity(id,quantity) {
+    async increaseQuantity(id,quantity,sizeId) {
       // const findIndexProductByID = this.listCarts.findIndex(
       //   (item) => item.id === id
       // );
@@ -155,18 +157,20 @@ export const useCounterStore = defineStore("counter", {
       // await this.addCartForAcc(arrr);
       this.isLoading++;
       const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
-      const cartId = await this.fetchCartIdByCustomerId(idCustom);
-      await this.addItemToCustomerCart(cartId,id,quantity);
+      const data = {userId: idCustom, sizeId: sizeId, quantity: quantity}
+      await savingServices.addItemToCart(data)
       this.isLoading--;
     },
-    async decreaseQuantity(id,quantity) {
+    async decreaseQuantity(id,quantity,sizeId) {
       // const findIndexProductByID = this.listCarts.findIndex(
       //   (item) => item.id === id
       // );
       this.isLoading++;
       const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
-      const cartId = await this.fetchCartIdByCustomerId(idCustom);
-      await this.addItemToCustomerCart(cartId,id,quantity);
+      // const cartId = await this.fetchCartIdByCustomerId(idCustom);
+      const data = {userId: idCustom, sizeId: sizeId, quantity: quantity}
+      await savingServices.addItemToCart(data)
+      // await this.addItemToCustomerCart(cartId,id,quantity);
       this.isLoading--;
       // this.listCarts[findIndexProductByID].quantity -= 1;
       // this.countCart();
@@ -176,20 +180,11 @@ export const useCounterStore = defineStore("counter", {
       //   this.addCartForAcc(arrr);
       // });
     },
-    async inputQuantity(id, value) {
-      // const findIndexProductByID = this.listCarts.findIndex(
-      //   (item) => item.id === id
-      // );
-      // const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
-      // this.listCarts[findIndexProductByID].quantity = value;
-      // localStorage.setItem("cart", JSON.stringify(this.listCarts));
-      // this.removeCart(idCustom);
-      // const arrr = { id: idCustom, cart: this.listCarts };
-      // this.addCartForAcc(arrr);
+    async inputQuantity(id, value, sizeId) {
       this.isLoading++;
       const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
-      const cartId = await this.fetchCartIdByCustomerId(idCustom);
-      await this.addItemToCustomerCart(cartId,id,value);
+      const data = {userId: idCustom, sizeId: sizeId, quantity: value}
+      await this.addItemToCart(data)
       this.isLoading--;
     },
     addCart() {
@@ -200,11 +195,11 @@ export const useCounterStore = defineStore("counter", {
       await savingServices.updateCartCustomer(data, customerId);
     },
     //DELETE
-    async removeCart(productId) {
+    async removeCart(cartId) {
       this.isLoading++;
       const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
-      const cartId = await this.fetchCartIdByCustomerId(idCustom);
-      await savingServices.deleteCart(cartId,productId);
+      // const cartId = await this.fetchCartIdByCustomerId(idCustom);
+      await savingServices.deleteCart(cartId);
       this.listCarts = await this.fetchListCustomerCart(idCustom);
       localStorage.setItem("cart", JSON.stringify(this.listCarts));
       this.isLoading--;
@@ -224,9 +219,9 @@ export const useCounterStore = defineStore("counter", {
     },
     //POST
     //có id
-    async addItemToCustomerCart(cartId, productId, quantity, customerId){
-      const result = await savingServices.addItemToCart(cartId, productId, quantity);
-      this.listCarts = await this.fetchListCustomerCart(customerId);
+    async addItemToCustomerCart(data){
+      const result = await savingServices.addItemToCart(data);
+      // this.listCarts = await this.fetchListCustomerCart(customerId);
       localStorage.setItem("cart", JSON.stringify(this.listCarts));
       return result.statusCode;
     },
@@ -260,22 +255,52 @@ export const useCounterStore = defineStore("counter", {
       this.getListInfo = this.arrInfo|| [];
       this.isLoading--;
     },
+    async editAddressUser (data) {
+      this.isLoading++;
+      const arr = (await savingServices.editInfoDelivery(data));
+      this.isLoading--;
+      return arr;
+    },
+    async deleteAddressUser (id) {
+      this.isLoading++;
+      const arr = (await savingServices.deleteInfoDelivery(id));
+      this.isLoading--;
+      return arr;
+    }, 
+    async addAddressUser (data) {
+      this.isLoading++;
+      const arr = (await savingServices.addInfoDelivery(data));
+      this.isLoading--;
+      return arr;
+    }, 
+    async createOrder (data) {
+      this.isLoading++;
+      const arr = await savingServices.addOrderForUser(data);
+      this.isLoading--;
+      return arr;
+    },
     async fetchListCustomerCart(customerId) {
       this.isLoading++;
       const arr = await savingServices.getCustomerCart(customerId);
       this.getListCart = arr.result;
       this.isLoading--;
     },
-    async fetchCartIdByCustomerId(customerId){
+    async getListAllOrder() {
       this.isLoading++;
-      const arr = await savingServices.getCartIdByCustomerId(customerId);
-      console.log("This is.....", arr)
+      const arr = await savingServices.getAllOrder();
       this.isLoading--;
-      return arr.result[0]?.cartID;
+      return arr.result;
     },
-    async fetchListAccounts() {
-      this.getListAcc = await savingServices.getListAccounts() || [];
-    },
+    // async fetchCartIdByCustomerId(customerId){
+    //   this.isLoading++;
+    //   const arr = await savingServices.getCartIdByCustomerId(customerId);
+    //   console.log("This is.....", arr)
+    //   this.isLoading--;
+    //   return arr.result[0]?.cartID;
+    // },
+    // async fetchListAccounts() {
+    //   this.getListAcc = await savingServices.getListAccounts() || [];
+    // },
     async checkLoginAccount(data){
       // this.isLoading++;
       // const arr = await savingServices.checkLogin(username,password);
@@ -283,15 +308,18 @@ export const useCounterStore = defineStore("counter", {
       this.checkLogin = await savingServices.checkLogin(data);
       // this.isLoading--;
     },
-    async fetchEachProduct(productId) {
+    async fetchEachProduct(productId) { 
       this.isLoading++;
       const arr = await savingServices.eachProduct(productId);
       if (arr.statusCode === 200) {
-        this.product = arr.result[0];
+        this.product = arr.result;
         this.isLoading--;
       }
+      else {
+        console.log("error");
+      }
     },
-    async fetchListProduct(page) {
+    async fetchListProduct(page) { 
       this.isLoading++;
       const arr = await savingServices.listProducts(this.perPage, page);
       console.log(arr);
@@ -305,7 +333,7 @@ export const useCounterStore = defineStore("counter", {
       const arr = await savingServices.saving(); //object
       console.log("here.....", arr.result[0]);
       if (arr.statusCode === 200) {
-        this.children = arr.result[0];
+        this.children = arr.result[0]; 
         this.isLoading--;
       }
     },

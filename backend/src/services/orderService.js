@@ -30,7 +30,7 @@ const createOrder = async (data) => {
     const order = await db.Order.create({
       addressUserId: data.addressUserId,
       isPaymentOnline: data.isPaymentOnline || 0, // Thanh toán Online hay COD
-      statusId: "S1", // Chờ xác nhận
+      statusId: "S3", // Chờ xác nhận
       typeShipId: data.typeShipId,
       note: data.note || "",
     });

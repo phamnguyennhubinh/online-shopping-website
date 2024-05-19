@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Breadcrumb :listBreadcrumb="listBreadcrumb" class="mb-4"/>
+    <!-- <Breadcrumb :listBreadcrumb="listBreadcrumb" class="mb-4"/> -->
     <a-flex justify="space-between" align="center" class="mb-2">
       <h3>List Product</h3>
       <router-link :to="`/product/add`">

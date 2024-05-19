@@ -2,7 +2,7 @@
   <div>
     <Breadcrumb :listBreadcrumb="listBreadcrumb" class="mb-4" />
     <div class="text-end">
-      <a-select class="text-start" v-model:value="value" value="S1" placeholder="Select status" style="width: 200px" :options="options"
+      <a-select class="text-start" v-model:value="value" value="S4" placeholder="Select status" style="width: 200px" :options="options"
         @change="handleChange"></a-select>
     </div>
     <a-descriptions title="Customer Detail">
@@ -48,15 +48,15 @@ const listBreadcrumb = [
 ]
 const options = ref([
   {
-    value: 'S1',
-    label: 'Đang chờ xác nhận',
+    value: 'S4',
+    label: 'Đang chờ giao hàng',
   },
   {
-    value: 'S2',
+    value: 'S6',
     label: 'Đã giao hàng',
   },
   {
-    value: 'S3',
+    value: 'S7',
     label: 'Huỷ đơn hàng',
   }
 ]);
@@ -67,7 +67,7 @@ const handleChange = async (value) => {
   })
   await fetchOrdersById()
 };
-const value = ref("S1");
+const value = ref("S4");
 const currentOrder = ref({});
 const fetchOrdersById = async () => {
   const res = await getOrdersById(id);

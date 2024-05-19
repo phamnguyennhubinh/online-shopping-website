@@ -7,8 +7,9 @@ import ListCart from "@/views/CartProduct/ListCart.vue";
 import PurchaseProducts from "@/views/CartProduct/component/PurchaseProducts.vue";
 import LoginAccount from "@/views/Account/components/LoginAccount.vue";
 import RegisterAccount from "@/views/Account/components/RegisterAccount.vue";
-import AdminShop from "@/views/Admin/AdminShop.vue";
-import LoginAdmin from "@/views/Admin/Login/LoginAdmin.vue";
+// import AdminShop from "@/views/Admin/AdminShop.vue";
+// import LoginAdmin from "@/views/Admin/Login/LoginAdmin.vue";
+import OrderTracking from "@/views/Orders/OrderTracking.vue"
 const routes = [
     {
         path: '/',
@@ -45,11 +46,11 @@ const routes = [
         name: 'RegisterAccount',
         component: RegisterAccount
     },
-    {
-        path: '/admin/login',
-        name: 'LoginAdmin',
-        component: LoginAdmin
-    },
+    // {
+    //     path: '/admin/login',
+    //     name: 'LoginAdmin',
+    //     component: LoginAdmin
+    // },
     // {
     //     path: '/shop/:idCustomer',
     //     name: 'ShopPageCustomer',
@@ -71,15 +72,24 @@ const routes = [
         component: LayoutPage
     },
     {
-        path: '/admin/index',
-        name: 'AdminShop',
-        component: AdminShop
+        path: '/order-tracking',
+        name: 'OrderTracking',
+        component: OrderTracking
     }
 ]
-
 const router = createRouter({
     history: createWebHistory(process.env.BASE_URL),
     routes
 })
+
+// router.beforeEach(async (to) => {
+//     const publicPages = ['/admin/login', '/admin/register'];
+//     const authRequired = !publicPages.includes(to.path);
+//     const authStore = JSON.parse(localStorage.getItem("token"));
+//     if (authRequired && !authStore) {
+//       authStore.returnUrl = to.fullPath;
+//       return '/admin/login';
+//     }
+//   });
 
 export default router

@@ -1,60 +1,67 @@
 <template>
   <div>
     <section class="container shadow">
-      <h1 class="login">LOGIN</h1>
-      <a-form
-        :model="formState"
-        name="basic"
-        :label-col="{ span: 8 }"
-        :wrapper-col="{ span: 8 }"
-        autocomplete="off"
-        @finish="onFinish"
-        @finishFailed="onFinishFailed"
-      >
-        <a-form-item
-          label="Username"
-          name="username"
-          :rules="[{ required: true, message: 'Please input your username!' }]"
-        >
-          <a-input
-            v-model:value="formState.username"
-            class="border-none"
-            ref="userNameInput"
-          />
-        </a-form-item>
-
-        <a-form-item
-          label="Password"
-          name="password"
-          :rules="[{ required: true, message: 'Please input your password!' }]"
-        >
-          <a-input-password
-            v-model:value="formState.password"
-            class="border-none"
-            ref="passwordInput"
-          />
-        </a-form-item>
-        <a-form-item name="remember" :wrapper-col="{ offset: 8, span: 8 }">
-          <span class="space"
-            ><a class="forgot-pass" href="#">Forgot password</a>
-            <router-link :to="{ name: 'RegisterAccount' }"
-              ><a href="#">Register now!</a></router-link
-            ></span
+      <div class="row">
+        <div class="col-md-6 content-center">
+          <img class="pic-login" src="@/assets/images/login_1.jpeg" />
+        </div>
+        <div class="col-md-6 content-center">
+          <a-form
+            :model="formState"
+            name="basic"
+            :label-col="{ span: 8 }"
+            :wrapper-col="{ span: 12 }"
+            autocomplete="off"
+            @finish="onFinish"
+            @finishFailed="onFinishFailed"
           >
-        </a-form-item>
+          <h1 class="login">LOGIN</h1>
+            <a-form-item
+              label="Username"
+              name="username"
+              :rules="[
+                { required: true, message: 'Please input your username!' },
+              ]"
+            >
+              <a-input
+                v-model:value="formState.username"
+                class="border-none"
+                ref="userNameInput"
+              />
+            </a-form-item>
 
-        <a-form-item
-          :wrapper-col="{ offset: 8, span: 8 }"
-          class="text-align-center"
-        >
-          <a-button class="btn-welcome" html-type="submit">LOGIN</a-button>
-        </a-form-item>
-        <a-alert v-show="isError" :message="nameError" type="error" show-icon>
-          <template #icon><smile-outlined /></template>
-        </a-alert>
-      </a-form>
+            <a-form-item
+              label="Password"
+              name="password"
+              :rules="[
+                { required: true, message: 'Please input your password!' },
+              ]"
+            >
+              <a-input-password
+                v-model:value="formState.password"
+                class="border-none"
+                ref="passwordInput"
+              />
+              <div class="d-flex justify-content-between mt-15">
+              <a class="forgot-pass" href="#">Forgot password</a>
+              <router-link :to="{ name: 'RegisterAccount' }"
+                  ><a href="#">Register now!</a></router-link
+                >
+            </div>
+            <a-button class="btn-welcome mt-15" html-type="submit">LOGIN</a-button>
+            </a-form-item>
+            <a-alert
+              v-show="isError"
+              :message="nameError"
+              type="error"
+              show-icon
+            >
+              <template #icon><smile-outlined /></template>
+            </a-alert>
+          </a-form>
+        </div>
+      </div>
     </section>
-    <router-view />
   </div>
 </template>
 
@@ -94,9 +101,7 @@ const onFinish = (values) => {
 const onFinishFailed = (errorInfo) => {
   console.log("Failed:", errorInfo);
 };
-onMounted(async () => {
-  await counterStore.fetchListAccounts();
-});
+onMounted(async () => {});
 
 const checkLoginAccountCustomer = async () => {
   const formLogin = {
@@ -131,11 +136,7 @@ const checkLoginAccountCustomer = async () => {
     console.log(arr1);
     const targetCart = arr1 || [];
     counterStore.listCarts = targetCart;
-    console
   }
-  // console.log("This is checklogin: ", counterStore.checkLogin);
-  // console.log("this is data give: ", formLogin);
-  // console.log("from Login",counterStore.checkLogin.statusCode);
   // const status = counterStore.checkLogin.statusCode;
   // if (status === 200) {
   //   const customerId = counterStore.checkLogin.result[0].customerID;
@@ -214,6 +215,16 @@ const checkLoginAccountCustomer = async () => {
 
 <style lang="scss" scoped>
 @import "@/style/styles.scss";
+.mt-15 {
+  margin-top: 15px;
+}
+.pic-login {
+  width: 100% !important;
+  height: auto !important;
+}
+.content-center {
+  align-self: center;
+}
 .border-none {
   border-radius: 0;
 }
@@ -230,8 +241,8 @@ const checkLoginAccountCustomer = async () => {
   margin: 40px 0;
 }
 .btn-welcome {
-  background-color: #f16179;
-  border: 1px solid #f16179;
+  background-color: #6f42c1;
+  border: 1px solid #6f42c1;
   font-size: 16px;
   color: $font-color;
   border-radius: 0;

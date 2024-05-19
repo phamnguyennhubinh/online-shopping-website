@@ -5,9 +5,7 @@ const getToken = JSON.parse(localStorage.getItem("token"));
 const request = axios.create({
   baseURL: "http://localhost:3001/"
 });
-const req_json = axios.create({
-  baseURL: "http://localhost:3000/",
-});
+
 const req_from_be = axios.create({
   baseURL: "http://localhost:8888/",
   headers: {
@@ -29,16 +27,6 @@ req_from_be.interceptors.response.use(function (response) {
 export const get = async (path, options = {}) => {
   try {
     const response = await request.get(path, options);
-    return JSON.stringify(response.data);
-  } catch (error) {
-    console.log("This is error in request: ", error);
-  }
-};
-
-//for json
-export const get_json = async (path, options = {}) => {
-  try {
-    const response = await req_json.get(path, options);
     return JSON.stringify(response.data);
   } catch (error) {
     console.log("This is error in request: ", error);

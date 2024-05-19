@@ -23,10 +23,10 @@
     >
       <a-input-password v-model:value="formState.password" />
     </a-form-item>
-    <a-form-item class="action">
-      <a-button type="primary" html-type="submit">Submit</a-button>
+    <a-form-item class="action d-flex justify-content-center">
+      <a-button type="primary" html-type="submit" size="large">Login</a-button>
       <router-link to="register">
-        <a-button type="default" html-type="submit">Đăng ký</a-button>
+        <a-button type="default" html-type="submit" size="large">Register</a-button>
       </router-link>
     </a-form-item>
   </a-form>
@@ -64,7 +64,7 @@ const onFinishFailed = errorInfo => {
   .login-form {
     padding: 20px;
     border-radius: 12px;
-    background-color: #F2F4F5;
+    background-color:#F2F4F5;
   }
   .action {
     button {

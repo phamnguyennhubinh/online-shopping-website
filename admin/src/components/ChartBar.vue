@@ -43,9 +43,9 @@ export default {
     },
     getReadableStatus(status) {
       const statusOrderMapping = {
-        'S1': 'Đơn hàng đang cần xác nhận',
-        'S2': 'Đơn hàng đã giao',
-        'S3': 'Đơn hàng đã huỷ'
+        'S4': 'Đơn hàng đang chờ giao',
+        'S6': 'Đơn hàng đã giao',
+        'S7': 'Đơn hàng đã huỷ'
       };
       return statusOrderMapping[status] || status;
     },
@@ -59,7 +59,7 @@ export default {
     },
     calculateWeeklyOrderStatus() {
       const result = {
-        'Đơn hàng đang cần xác nhận': 0,
+        'Đơn hàng đang chờ giao': 0,
         'Đơn hàng đã giao': 0,
         'Đơn hàng đã huỷ': 0
       };
@@ -115,7 +115,7 @@ export default {
       let totalRevenue = 0;
 
       this.orders.forEach(order => {
-        if (this.isWithinThisWeek(order.createdAt) && order.statusOrder === 'S2') {
+        if (this.isWithinThisWeek(order.createdAt) && order.statusOrder === 'S6') {
           totalRevenue += order.totalPrice;
         }
       });

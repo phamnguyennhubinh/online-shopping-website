@@ -39,52 +39,65 @@
             <h3 class="nameProduct can-le-respon-1">
               {{ counterStore.product.name }}
             </h3>
-            <div class="can-le-trai can-le-respon">
-              {{ value9 }}
-              <a-rate
-                v-model:value="value9"
-                allowHalf
-                class="changeRes"
-              ></a-rate>
-              <a href="#">&nbsp;&nbsp;| 704 Đánh giá</a>
-              &nbsp; | &nbsp; 2,5k Đã bán
-            </div>
             <!-- price-discount-background -->
             <div class="can-le-trai">
               <div class="margin-top-30 text-align-center-res">
                 <span class="price-discount margin-left-20">{{
-                  counterStore.product.price * 2
+                  counterStore.product.originalPrice
                 }}</span>
                 <span class="price">
-                  &nbsp;{{ counterStore.product.price }}&nbsp;&nbsp;</span
+                  &nbsp;{{
+                    counterStore.product.discountPrice
+                  }}&nbsp;&nbsp;</span
                 >
-                <span class="discount">50% GIẢM</span>
+                <span class="discount">{{ ((counterStore.product.originalPrice - counterStore.product.discountPrice)/counterStore.product.originalPrice)*100  }}% GIẢM</span>
                 <div class="flex items-center"></div>
               </div>
             </div>
-            <div class="flex items-center">
-              <span class="margin-0-20">Số Lượng</span>
+            <div class="flex flex-row gap-10">
               <div>
-                <a-input-number
-                  id="inputNumber"
-                  v-model:value="value1"
-                  :min="1"
-                  :max="100"
-                />
+                <div>Số Lượng</div>
+                <div>
+                  <a-input-number
+                    id="inputNumber"
+                    v-model:value="value1"
+                    :min="1"
+                    :max="100"
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <a-select
-                v-model:value="value"
-                show-search
-                placeholder="Select a size"
-                style="width: 200px"
-                :options="options"
-                :filter-option="filterOption"
-                @focus="handleFocus"
-                @blur="handleBlur"
-                @change="handleChange"
-              ></a-select>
+              <div>
+                <span>Kích cỡ</span>
+                <div>
+                  <a-select
+                    v-model:value="sizeItem"
+                    show-search
+                    placeholder="Select a size"
+                    style="width: 200px"
+                    :options="listSizes"
+                    :filter-option="filterOption"
+                    @focus="handleFocus"
+                    @blur="handleBlur"
+                    @change="handleChange"
+                  ></a-select>
+                </div>
+              </div>
+              <div>
+                <span>Màu sắc</span>
+                <div>
+                  <a-select
+                    v-model:value="colorItem"
+                    show-search
+                    placeholder="Select a size"
+                    style="width: 200px"
+                    :options="listColors"
+                    :filter-option="filterOptionColor"
+                    @focus="handleFocus"
+                    @blur="handleBlur"
+                    @change="handleChangeCorlor"
+                  ></a-select>
+                </div>
+              </div>
             </div>
             <div class="margin-left-20 can-le-trai center-res">
               <button type="button" class="button-add-cart" @click="addToCart">
@@ -104,60 +117,11 @@
       <section class="margin-50-0">
         <h3>CHI TIẾT SẢN PHẨM</h3>
         <div>
-          Tự tạo cuộc chơi - tự tạo phong cách, đó là OVERSIZED-FIT UNISEX
-          FASHION TREND. Bạn là tay chơi thời trang sành điệu, hay chỉ đơn giản
-          là một kẻ “thấy thích thì mặc”? Dù là ai, bạn cũng nên thử nghĩ đến áo
-          thun tay lỡ – một items mới mẻ mang đến style năng động và “chất lừ”
-          cho bất cứ ai sở hữu nó. Không phải áo thun freesize hay tay dài nữa,
-          áo thun tay lỡ mới thực sự làm điên đảo giới trẻ trong thời điểm này.
-        </div>
-        <div class="flex card">
-          <img src="https://mcdn.coolmate.me/image/March2024/mceclip0_87.jpg" />
-          <img src="https://mcdn.coolmate.me/image/March2024/mceclip1_85.jpg" />
-          <img src="https://mcdn.coolmate.me/image/March2024/mceclip2_85.jpg" />
-        </div>
-      </section>
-      <section style="margin: 50px 0">
-        <h3>ĐÁNH GIÁ SẢN PHẨM</h3>
-        <div class="row">
-          <div class="col-md-3">Đánh giá 5 sao</div>
-          <div class="col-md-9">
-            <div class="row">
-              <div class="col-md-6">
-                <div>Chỗ để sao</div>
-                <div>Tên gmail</div>
-                <div>Đánh giá</div>
-              </div>
-              <div class="col-md-6">
-                <div>Chỗ để sao</div>
-                <div>Tên gmail</div>
-                <div>Đánh giá</div>
-              </div>
-            </div>
-            <hr />
-            <div class="row">
-              <div class="col-md-6">
-                <div>Chỗ để sao</div>
-                <div>Tên gmail</div>
-                <div>Đánh giá</div>
-              </div>
-              <div class="col-md-6">
-                <div>Chỗ để sao</div>
-                <div>Tên gmail</div>
-                <div>Đánh giá</div>
-              </div>
-            </div>
-            <hr />
-          </div>
+          {{ counterStore.product.content }}
         </div>
       </section>
     </section>
-    <div class="row container">
-      <div class="col-md-6"></div>
-      <div class="col-md-6"></div>
-    </div>
   </div>
-  <router-view />
 </template>
 
 <script setup>
@@ -165,96 +129,100 @@ import { onMounted, ref } from "vue";
 import { useCounterStore } from "@/stores";
 import { useRoute } from "vue-router";
 import { message } from "ant-design-vue";
-// import {
-//   RightCircleOutlined,
-//   LeftCircleOutlined,
-// } from "@ant-design/icons-vue";
 import "vue-slick-carousel/dist/vue-slick-carousel.css";
 import "vue-slick-carousel/dist/vue-slick-carousel-theme.css";
 const counterStore = useCounterStore();
-const value9 = ref(4.5);
-// const placement = ref("topLeft");
-// const value2 = ref("HangZhou");
 const value1 = ref(1);
-// const value3 = ref("HangZhou1");
 const sanphams = ref([]);
 const route = useRoute();
-// const router = useRoute();
+const router = useRoute();
 const carouselPic = ref([]);
-// const priceNoDiscount = Number(Number(counterStore.product.price)*2)
-// const temp = ref([]);
-const options = ref([
-  {
-    value: 'S',
-    label: 'S',
-  },
-  {
-    value: 'M',
-    label: 'M',
-  },
-  {
-    value: 'L',
-    label: 'L',
-  },
-  {
-    value: 'XL',
-    label: 'XL',
-  },
-  {
-    value: 'XXL',
-    label: 'XXL',
-  },
-  {
-    value: 'XXXL',
-    label: 'XXXL',
-  },
-]);
-const handleChange = value => {
-  console.log(`selected ${value}`);
+// const discountPercent = ref(0);
+const listColors = ref([]);
+const listSizes = ref([]);
+const selectSize = ref(null);
+const selectColor = ref(null);
+
+const handleChange = (sizeItem) => {
+  console.log(`selected ${sizeItem}`);
+  selectSize.value = sizeItem;
 };
+
+const handleChangeCorlor = (colorItem) => {
+  console.log(`selected ${colorItem}`);
+  selectColor.value = colorItem;
+};
+
 const filterOption = (input, option) => {
   return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
+
+const filterOptionColor = (input, option) => {
+  return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+
 onMounted(async () => {
   scrollToTop();
   const productId = route.params.id;
   await counterStore.fetchEachProduct(productId);
-  console.log(counterStore.product);
   sanphams.value = counterStore.product;
-  console.log(value1.value);
-  carouselPic.value = counterStore.product.pic;
-  for (let i = 0; i < carouselPic.value.length; i++) {
-    console.log(carouselPic.value[i]);
+  const arr = counterStore.product?.images;
+  const colors = counterStore.product.colors;
+  const sizes = counterStore.product.sizes;
+  for (let i = 0; i < arr.length; i++) {
+    if(arr[i]) {
+      const picture = arr[i].image;
+    carouselPic.value.push(picture);
+    }
+  }
+  for (let i = 0; i < colors.length; i++) {
+    listColors.value.push({ value: colors[i].id, label: colors[i].value });
+  }
+  for (let i = 0; i < sizes.length; i++) {
+    listSizes.value.push({ value: sizes[i].id, label: sizes[i].sizeId });
   }
 });
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 const addToCart = async () => {
-  const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
-  const cartId = await counterStore.fetchCartIdByCustomerId(idCustom);
-  const status = await counterStore.addItemToCustomerCart(
-    cartId,
-    route.params.id,
-    value1.value,
-    idCustom
-  );
-  if (status === 200) {
-    message.success("Đã thêm sản phẩm vào giỏ hàng!");
-  } else {
-    message.error("Thêm sản phẩm không thành công!");
-  }
-  // counterStore.addToCart(sanphams.value, value1.value);
+  try {
+    if(selectSize.value === null)
+    {
+      return message.error("Vui lòng chọn size");
+    } else if (selectColor.value === null)
+    {
+      return message.error("Vui lòng chọn màu áo");
+    }
+    const idCustom = JSON.parse(localStorage.getItem("idCustomer"));
+    const data = {
+      userId: idCustom,
+      sizeId: selectSize.value,
+      quantity: value1.value,
+    };
 
-  // await counterStore.removeCart(idCustom);
-  // const temp = {id: idCustom, cart: counterStore.listCarts};
-  // console.log(temp);
-  // await counterStore.addCartForAcc(temp);
+    const status = await counterStore.addItemToCustomerCart(data);
+    if (status === 200) {
+      message.success("Đã thêm sản phẩm vào giỏ hàng!");
+    } else {
+      message.error("Thêm sản phẩm không thành công!");
+    }
+  } catch (error) {
+    message.error("Somethings wrong!! You should comeback later.");
+    console.log(error);
+  }
 };
 const buyNow = async () => {
   const productId = route.params.id;
-  await counterStore.buyNow(productId, value1);
-  // router.push({ name: "PurchaseProducts" });
+  if(selectSize.value === null)
+    {
+      return message.error("Vui lòng chọn size");
+    } else if (selectColor.value === null)
+    {
+      return message.error("Vui lòng chọn màu áo");
+    }
+  await counterStore.buyNow(productId, selectSize.value, selectColor.value, value1);
+  router.push({ name: "PurchaseProducts" });
   counterStore.totalBillOrder;
 };
 const getImage = (i) => {
@@ -267,6 +235,9 @@ const getImage = (i) => {
 //...
 .col-md-5 {
   text-align: left;
+}
+.gap-10 {
+  gap: 10px;
 }
 // @import "@/assets/styles/grid.css";
 $color-main: orangered;

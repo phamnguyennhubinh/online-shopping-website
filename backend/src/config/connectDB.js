@@ -1,9 +1,10 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize('online-shopping-website', 'root', null, {
+const sequelize = new Sequelize('online-shopping-website', 'root', 'ANSKk08aPEDbFjDO', {
     host: 'localhost',
     dialect: 'mysql',
     logging: false,
+    port: 3307
 });
 
 let connectDB = async () => {

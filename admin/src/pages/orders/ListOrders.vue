@@ -20,9 +20,9 @@
           {{ dayjs(record.createdAt).format('DD/MM/YYYY')}}
         </template>
         <template v-else-if="column.key === 'statusOrder'">
-          <span v-if="record.statusOrder === 'S1'" class="bg-wn status-order ant-alert-message">Pending</span>
-          <span v-if="record.statusOrder === 'S2'" class="bg-success status-order ant-alert-message">Done</span>
-          <span v-if="record.statusOrder === 'S3'" class="bg-danger status-order ant-alert-message">Cancel</span>
+          <span v-if="record.statusOrder === 'S4'" class="bg-wn status-order ant-alert-message">Pending</span>
+          <span v-if="record.statusOrder === 'S6'" class="bg-success status-order ant-alert-message">Done</span>
+          <span v-if="record.statusOrder === 'S7'" class="bg-danger status-order ant-alert-message">Cancel</span>
         </template>
       </template>
     </a-table>

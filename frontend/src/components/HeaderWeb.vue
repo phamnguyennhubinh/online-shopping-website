@@ -50,9 +50,9 @@
                 <a href="#"><span class="font-menu">WHY US</span></a>
                 <!-- <a-menu v-model:selectedKeys="current" mode="horizontal" :items="items" /> -->
               </div>
-              <div class="col-sm-12">
+              <!-- <div class="col-sm-12">
                 <a href="#"><span class="font-menu"> TESTIMONIAL</span></a>
-              </div>
+              </div> -->
               <div class="col-sm-12">
                 <a href="#"><span class="font-menu">CONTACT US </span></a>
               </div>
@@ -110,9 +110,9 @@
         <li>
           <a href="#">WHY US</a>
         </li>
-        <li>
+        <!-- <li>
           <a href="#">TESTIMONIAL</a>
-        </li>
+        </li> -->
         <li>
           <a href="#">CONTACT US</a>
         </li>
@@ -151,7 +151,6 @@
       </ul>
     </div>
   </div>
-  <router-view />
 </template>
 
 <script>

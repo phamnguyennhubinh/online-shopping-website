@@ -1,9 +1,10 @@
 {
     "development": {
       "username": "root",
-      "password": null,
+      "password": "ANSKk08aPEDbFjDO",
       "database": "online-shopping-website",
       "host": "localhost",
+      "port": "3307",
       "dialect": "mysql",
       "logging": false,
       "query": {
@@ -13,14 +14,16 @@
     },
     "test": {
       "username": "root",
-      "password": null,
+      "password": "ANSKk08aPEDbFjDO",
+      "port": "3307",
       "database": "database_test",
       "host": "localhost",
       "dialect": "mysql"
     },
     "production": {
       "username": "root",
-      "password": null,
+      "password": "ANSKk08aPEDbFjDO",
+      "port": "3307",
       "database": "database_production",
       "host": "localhost",
       "dialect": "mysql"

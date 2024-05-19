@@ -16,14 +16,14 @@
     <img class="picture-box" :src="pic" />
   </div>
   <div
-    class="col-lg-2 col-md-2 col-sm-2 align-items-center justify-content-center font-weight"
+    class="col-lg-2 col-md-2 col-sm-2 align-items-center justify-content-center"
   >
-    {{ name }}
+    <div class="font-weight">{{ name }} - {{ color }}</div>
   </div>
   <div
     class="col-lg-2 col-md-2 col-sm-2 align-items-center justify-content-center color-price"
   >
-    ${{ price }}
+    {{ price }}
   </div>
   <div
     class="col-lg-2 col-md-2 col-sm-4 align-items-center justify-content-center"
@@ -40,7 +40,10 @@
         @input="updateQuantity"
         @keydown="handleKeyDown"
       />
-      <button @click="counterStore.increaseQuantity(id, quantity)" class="quantity">
+      <button
+        @click="counterStore.increaseQuantity(id, quantity)"
+        class="quantity"
+      >
         <i class="fa-solid fa-plus"></i>
       </button>
     </div>
@@ -48,7 +51,7 @@
   <div
     class="col-lg-2 col-md-2 col-sm-2 align-items-center justify-content-center"
   >
-    <div class="color-price">${{ totalEach }}</div>
+    <div class="color-price">{{ totalEach }}</div>
   </div>
   <div
     class="col-lg-2 col-md-2 col-sm-2 align-items-center justify-content-center"
@@ -69,6 +72,8 @@ export default {
     quantity: Number,
     status: Boolean,
     checkboxCart: Boolean,
+    color: String,
+    sizeId: Number
   },
   data() {
     const counterStore = useCounterStore();
@@ -92,14 +97,13 @@ export default {
       // Được gọi mỗi khi giá trị của trường input thay đổi
       // this.quantity = event.target.value;
       const num = Number(event.target.value);
-      if(num === 0)
-      {
+      if (num === 0) {
         this.deleteCart();
+      } else {
+        this.deleteCart();
+        this.counterStore.inputQuantity(this.id, num, this.sizeId);
       }
-      else {
-        this.counterStore.inputQuantity(this.id, num);
-      }
-      
+
       // Xử lý logic của bạn tại đây
     },
     getValue() {
@@ -116,7 +120,8 @@ export default {
       if (this.quantity === 1) {
         this.deleteCart();
       } else {
-        this.counterStore.decreaseQuantity(this.id,this.quantity);
+        this.deleteCart();
+        this.counterStore.decreaseQuantity(this.id, this.quantity, this.sizeId);
       }
     },
     addOrder() {
@@ -128,7 +133,6 @@ export default {
     computedProductId() {
       return this.id;
     },
-
   },
   computed: {
     totalEach() {
@@ -141,7 +145,6 @@ export default {
       this.checked = newValue;
     },
   },
-  
 };
 </script>
 

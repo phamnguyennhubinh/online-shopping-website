@@ -1,6 +1,7 @@
 <template>
   <div>
     <HeaderWeb />
+      <router-view />
     <FooterWeb
       :class="currentRoute === 'AdminShop' ? 'isAdmin' : 'noneAdmin'"
     />
@@ -57,7 +58,6 @@ const route = useRoute();
 // Sử dụng watchEffect để theo dõi thay đổi của route và lưu vào biến currentRoute
 watchEffect(() => {
   currentRoute = route.name;
-  console.log(currentRoute);
 });
 counterStore.countC = computed(() => (counterStore.listCarts || []).length);
 // const currentRoute = null;
