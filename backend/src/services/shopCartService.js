@@ -3,6 +3,7 @@ import {
   successResponse,
   errorResponse,
   missingRequiredParams,
+  notFound,
 } from "../utils/ResponseUtils";
 
 const calculateStock = async (sizeId, orderDetails) => {
@@ -99,71 +100,84 @@ const updateShopCart = async (data, orderDetails) => {
 };
 
 const getShopCartByUserId = async (userId) => {
-  try {
-    if (!userId) {
-      missingRequiredParams("userId");
-    }
+  if (!userId) {
+    return missingRequiredParams("userId");
+  }
 
+  try {
     const shopCartItems = await db.ShopCart.findAll({
-      where: { userId: userId, statusId: 0 },
+      where: { userId },
       raw: true,
     });
 
-    if (!shopCartItems || shopCartItems.length === 0) {
-      return {
-        result: [],
-        statusCode: 404,
-        errors: [`No shop cart items found for the user with userId ${userId}`],
-      };
+    if (shopCartItems.length === 0) {
+      return notFound(
+        `No shop cart items found for the user with userId ${userId}`
+      );
     }
-    const productDetailPromises = shopCartItems.map(async (item) => {
-      const productDetail = await db.ProductDetail.findOne({
+
+    const productDetailsPromises = shopCartItems.map(async (item) => {
+      const productSize = await db.ProductSize.findOne({
         where: { id: item.sizeId },
         include: [
           {
-            model: db.Product,
-            as: "productData",
-            attributes: ["name"],
+            model: db.ProductDetail,
+            as: "productDetailData",
+            include: [
+              {
+                model: db.Product,
+                as: "productData",
+                attributes: ["id", "name"],
+              },
+              {
+                model: db.ProductImage,
+                as: "productImageData",
+                attributes: ["image"],
+              },
+            ],
+            attributes: [
+              "id",
+              "productId",
+              "color",
+              "originalPrice",
+              "discountPrice",
+            ],
           },
-          {
-            model: db.ProductImage,
-            as: "productImageData",
-            attributes: ["image"],
-          },
-          { model: db.ProductSize, as: "sizeData", attributes: ["sizeId"] },
         ],
+        attributes: ["id", "productDetailId", "sizeId"],
         raw: true,
+        nest: true,
       });
-      return productDetail;
-    });
 
-    const productDetails = await Promise.all(productDetailPromises);
-
-    const data = shopCartItems.map((item, index) => {
-      const productDetail = productDetails[index];
-      if (!productDetail) {
-        return null;
+      if (!productSize || !productSize.productDetailData) {
+        return { ...item, productDetailNotFound: true };
       }
 
+      const { productDetailData } = productSize;
+      const total = item.quantity * productDetailData.discountPrice;
+
       return {
-        id: item.id,
-        userId: item.userId,
-        sizeId: item.sizeId,
-        sideData: productDetail["sizeData.sizeId"],
-        quantity: item.quantity,
-        productId: productDetail.productId,
-        name: productDetail["productData.name"],
-        image: productDetail["productImageData.image"],
-        color: productDetail.color,
-        originalPrice: productDetail.originalPrice,
-        discountPrice: productDetail.discountPrice,
+        ...item,
+        productId: productDetailData.productData.id,
+        name: productDetailData.productData.name,
+        image:
+          productDetailData.productImageData.length > 0
+            ? productDetailData.productImageData[0].image
+            : "No image available",
+        color: productDetailData.color,
+        originalPrice: productDetailData.originalPrice,
+        discountPrice: productDetailData.discountPrice,
+        size: productSize.sizeId,
+        total,
       };
     });
 
+    const productDetails = await Promise.all(productDetailsPromises);
+
     return {
-      result: data.filter((item) => item !== null),
+      result: productDetails,
       statusCode: 200,
-      errors: [`Get shop cart of user with id = ${userId} successfully!`],
+      errors: [`Get shop cart by userId = ${userId} successfully!`],
     };
   } catch (error) {
     console.error("Error in getShopCartByUserId:", error);

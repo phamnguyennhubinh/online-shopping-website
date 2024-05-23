@@ -9,6 +9,10 @@ module.exports = (sequelize, DataTypes) => {
         targetKey: "code",
         as: "sizeData",
       });
+      ProductSize.belongsTo(models.ProductDetail, {
+        foreignKey: "productDetailId",
+        as: "productDetailData",
+      });
     }
   }
   ProductSize.init(
