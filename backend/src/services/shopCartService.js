@@ -163,7 +163,7 @@ const getShopCartByUserId = async (userId) => {
         image:
           productDetailData.productImageData.length > 0
             ? productDetailData.productImageData[0].image
-            : "No image available",
+            : null,
         color: productDetailData.color,
         originalPrice: productDetailData.originalPrice,
         discountPrice: productDetailData.discountPrice,
