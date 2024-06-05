@@ -1,5 +1,10 @@
 import db from "../models/index";
-import { errorResponse, successResponse } from "../utils/ResponseUtils";
+import {
+  missingRequiredParams,
+  errorResponse,
+  successResponse,
+  notFound,
+} from "../utils/ResponseUtils";
 
 const createAddressUser = async (data) => {
   try {
@@ -43,16 +48,15 @@ const getAllAddressUser = async (userId) => {
   }
 };
 
-const deleteAddressUser = async (data) => {
+const deleteAddressUser = async (id) => {
   try {
-    const { id } = data;
     if (!id) {
       return missingRequiredParams("id");
     }
 
     const addressUser = await db.AddressUser.findOne({ where: { id } });
     if (!addressUser) {
-      return notFound("Address user not found");
+      return notFound("Address user");
     }
 
     await db.AddressUser.destroy({ where: { id } });

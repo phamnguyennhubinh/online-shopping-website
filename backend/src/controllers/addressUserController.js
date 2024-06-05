@@ -29,19 +29,22 @@ const getAllAddressUser = async (req, res) => {
   }
 };
 
+// const deleteAddressUser = async (req, res) => {
+//   return handleAddressUserRequest(
+//     addressUserService.deleteAddressUser,
+//     req,
+//     res
+//   );
+// };
+
 const deleteAddressUser = async (req, res) => {
-  return handleAddressUserRequest(
-    addressUserService.deleteAddressUser,
-    req,
-    res
-  );
-  //   try {
-  //     const data = await addressUserService.deleteAddressUser(req.body);
-  //     return res.status(200).json(data);
-  //   } catch (error) {
-  //     console.error(error);
-  //     return res.status(500).json(errorResponse("Error from server"));
-  //   }
+  try {
+    const data = await addressUserService.deleteAddressUser(req.query.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(errorResponse("Error from server"));
+  }
 };
 
 const editAddressUser = async (req, res) => {
