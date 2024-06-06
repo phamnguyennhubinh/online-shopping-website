@@ -120,7 +120,6 @@ watch(
         counterStore.listCarts[i].status = true;
       }
       hidden.value = false;
-      console.log(counterStore.listCarts);
       // localStorage.setItem("addCart", JSON.stringify(arrId.value));
     } else {
       hidden.value = false;
@@ -209,7 +208,6 @@ const updateStatus = (newStatus, productId) => {
 };
 
 const selectAll = () => {
-  console.log(checkboxCart.value);
   if (checkboxCart.value === true) {
     checkboxOrder.value = true;
     counterStore.checkedbox = true;
@@ -235,7 +233,9 @@ const computedValue = computed(() => {
 });
 
 const deleteCart = async (cartId) => {
-  counterStore.listCarts = counterStore.listCarts.reduce((item) => item.id);
+  const index = counterStore.listCarts.findIndex((item) => item.id === cartId)
+  counterStore.listCarts.splice(index, 1);
+  console.log(counterStore.listCarts)
   await counterStore.removeCart(cartId);
 };
 

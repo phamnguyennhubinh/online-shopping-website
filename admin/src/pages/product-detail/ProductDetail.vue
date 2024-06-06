@@ -46,8 +46,8 @@ const isEdit = ref(false);
 const product = ref({});
 const listBreadcrumb = [
   {
-    name: 'Home',
-    link: '/home'
+    name: 'List Products',
+    link: '/products'
   },
   {
     name: 'Product Detail',

@@ -25,9 +25,9 @@
     </a-form-item>
     <a-form-item class="action d-flex justify-content-center">
       <a-button type="primary" html-type="submit" size="large">Login</a-button>
-      <router-link to="register">
+      <!-- <router-link to="register">
         <a-button type="default" html-type="submit" size="large">Register</a-button>
-      </router-link>
+      </router-link> -->
     </a-form-item>
   </a-form>
 </template>

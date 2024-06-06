@@ -36,12 +36,12 @@
         class="quantity inputQuantity"
         type="text"
         id="inputBuy"
-        :value="quantity"
+        v-model="quantityCartItem"
         @input="updateQuantity"
         @keydown="handleKeyDown"
       />
       <button
-        @click="counterStore.increaseQuantity(id, quantity)"
+        @click="counterStore.increaseQuantity(id, quantity, sizeId)"
         class="quantity"
       >
         <i class="fa-solid fa-plus"></i>
@@ -79,10 +79,12 @@ export default {
     const counterStore = useCounterStore();
     const count = 1;
     let checked = ref(this.status);
+    let quantityCartItem = ref(this.quantity)
     return {
       counterStore,
       count,
       checked,
+      quantityCartItem
     };
   },
   methods: {
@@ -95,7 +97,8 @@ export default {
     },
     updateQuantity(event) {
       // Được gọi mỗi khi giá trị của trường input thay đổi
-      // this.quantity = event.target.value;
+      this.quantityCartItem = event.target.value;
+      console.log(this.quantityCartItem)
       const num = Number(event.target.value);
       if (num === 0) {
         this.deleteCart();
@@ -108,7 +111,7 @@ export default {
     },
     getValue() {
       const ex = document.getElementById("inputBuy");
-      console.log(ex.value);
+      console.log(ex)
     },
     deleteCart() {
       this.$emit("delete", this.$props.id);
@@ -117,7 +120,7 @@ export default {
       this.$emit("plus", this.$props.count);
     },
     countMinus() {
-      if (this.quantity === 1) {
+      if (this.quantityCartItem === 1) {
         this.deleteCart();
       } else {
         this.deleteCart();
@@ -148,7 +151,7 @@ export default {
 };
 </script>
 
-<style lang="scss" scopped>
+<style lang="scss" scoped>
 .position-relative {
   position: relative;
 }

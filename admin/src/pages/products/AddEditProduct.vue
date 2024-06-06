@@ -1,5 +1,6 @@
 <template>
-  <h3>{{isEdit ? 'Edit product' : 'Add new product'}}</h3>
+  <div>
+    <h3>{{isEdit ? 'Edit product' : 'Add new product'}}</h3>
   <a-form ref="formRef" layout="vertical" :model="formState" :rules="rules">
     <a-row :gutter="10">
       <a-col :span="12">
@@ -8,9 +9,23 @@
         </a-form-item>
       </a-col>
       <a-col :span="12">
-        <a-form-item label="Branch" name="branch">
+        <a-form-item label="Brand" name="brand">
           <a-select v-model:value="formState.brand" placeholder="please select your zone">
             <a-select-option v-for="brand in listBrand" :value="brand.code">{{ brand.value }}</a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-col>
+      <!-- <a-col :span="12">
+        <a-form-item label="Nhà cung cấp" name="supplier">
+          <a-select v-model:value="formState.supplier" placeholder="please select your zone">
+            <a-select-option v-for="supplier in listSupplier" :value="supplier.name">{{ supplier.name }}</a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-col> -->
+      <a-col :span="12">
+        <a-form-item label="Category" name="category">
+          <a-select v-model:value="formState.categoryId" placeholder="please select your zone">
+            <a-select-option v-for="cate in listCategory" :value="cate.code">{{ cate.value }}</a-select-option>
           </a-select>
         </a-form-item>
       </a-col>
@@ -74,6 +89,8 @@
       </a-col>
     </a-row>
   </a-form>
+  </div>
+  
 </template>
 <script setup>
 import { reactive, ref, onMounted } from 'vue';
@@ -101,12 +118,14 @@ const props = defineProps({
 })
 
 const { updateProduct, createProduct } = useProducts();
-const { getListBrand, getListColor, getListSize } = useSettings();
+const { getListBrand, getListColor, getListSize, getListCategory, getListSupplier } = useSettings();
 const { dataSource, isEdit } = props
 const formRef = ref();
 const listColor = ref([]);
 const listBrand = ref([]);
 const listSize = ref([]);
+const listCategory = ref([])
+const listSupplier = ref([])
 
 const fetchSettings = async () => {
   const resBrand = await getListBrand();
@@ -115,7 +134,10 @@ const fetchSettings = async () => {
   listColor.value = resColor
   const resSize = await getListSize();
   listSize.value = resSize
-  console.log(listSize.value)
+  const resCategory = await getListCategory();
+  listCategory.value = resCategory
+  const resSupplier = await getListSupplier();
+  listSupplier.value = resSupplier
 }
 
 const id = route.params.id;
@@ -123,17 +145,22 @@ const formState = reactive({
   id: id,
   name: dataSource?.name ?? '',
   brand: dataSource?.brand?.code ?? '',
+  brandId: dataSource?.brand?.code ?? '',
   statusId: dataSource?.statusId ?? '',
   content: dataSource?.content ?? '',
   color: dataSource?.colors?.map(item => item.code) ?? [],
   categoryId: dataSource?.category?.code,
   statusId: dataSource?.statusId,
+  supplierId: 1,
   originalPrice: dataSource?.originalPrice ?? '',
   discountPrice: dataSource?.discountPrice ?? '',
   size: dataSource?.sizes?.map(item => item.sizeId) ?? [],
   fileListProduct: Utils.addBase64Files(dataSource.images),
   quantity: 10,
+  userId: 3,
+
 });
+console.log("data source", dataSource)
 const rules = {
   name: [
     {
@@ -184,7 +211,9 @@ const onSubmit = async (mode) => {
     let res;
     const formData = new FormData();
     formState.brandId = formState.brand;
-    formState.productId = dataSource.id;
+    formState.categoryId = formState.categoryId;
+    formState.productId = route.params.id;
+    formState.supplierId = 1; 
     for (const key in formState) {
       if (key !== 'fileListProduct') {
         formData.append(key, formState[key]);

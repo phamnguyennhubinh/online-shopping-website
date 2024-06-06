@@ -6,7 +6,9 @@ import {
   UPDATE_CODE,
   DELETE_CODE,
   GET_SIZE,
-  DELETE_TYPE_SHIP
+  DELETE_TYPE_SHIP,
+  GET_CATEGORY,
+  GET_SUPPLIER
 } from '@/helpers/api'
 import { AxiosInstance } from '@/helpers/request';
 import { message } from 'ant-design-vue';
@@ -32,6 +34,24 @@ export const useSettings = defineStore({
     async getListBrand() {
       try {
         const res = await AxiosInstance.get(GET_BRAND);
+        this.listCode = res.data.result
+        return res?.data?.result[0] ?? []
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    async getListCategory() {
+      try {
+        const res = await AxiosInstance.get(GET_CATEGORY);
+        this.listCode = res.data.result
+        return res?.data?.result[0] ?? []
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    async getListSupplier() {
+      try {
+        const res = await AxiosInstance.get(GET_SUPPLIER);
         this.listCode = res.data.result
         return res?.data?.result[0] ?? []
       } catch (error) {

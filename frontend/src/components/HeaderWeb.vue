@@ -169,7 +169,7 @@ export default {
     const statusLogin = "Login";
     let hidden = false;
     let hidden2 = true;
-    let countCart = counterStore.countC;
+    let countCart
     const templ = JSON.parse(localStorage.getItem("idCustomer"));
     return {
       imageURL: "./assets/slider.png",

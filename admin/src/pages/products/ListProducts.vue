@@ -81,8 +81,8 @@ const columns = [
   },
   {
     title: 'Brand',
-    dataIndex: 'brandId',
-    key: 'brandId',
+    dataIndex: 'brand',
+    key: 'brand',
   },
   {
     title: 'Category',

@@ -191,8 +191,8 @@ export const useCounterStore = defineStore("counter", {
       this.countCart++;
     },
     //PATCH
-    async updateCart(data, customerId) {
-      await savingServices.updateCartCustomer(data, customerId);
+    async updateCart(data) {
+      await savingServices.updateCartCustomer(data);
     },
     //DELETE
     async removeCart(cartId) {
@@ -204,8 +204,9 @@ export const useCounterStore = defineStore("counter", {
       localStorage.setItem("cart", JSON.stringify(this.listCarts));
       this.isLoading--;
     },
-    async removeInfoDelivery(customerId) {
-      await savingServices.deleteInfoDelivery(customerId);
+    async deleteInDelivery(customerId) {
+      return await savingServices.removeInfoDelivery(customerId);
+       
     },
     async removeOrderDetail(customerId) {
       await savingServices.deleteOrderDetail(customerId);
@@ -284,6 +285,8 @@ export const useCounterStore = defineStore("counter", {
       const arr = await savingServices.getCustomerCart(customerId);
       this.getListCart = arr.result;
       this.isLoading--;
+      return arr.result
+      
     },
     async getListAllOrder() {
       this.isLoading++;

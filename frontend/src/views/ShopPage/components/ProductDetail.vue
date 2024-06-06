@@ -103,11 +103,11 @@
               <button type="button" class="button-add-cart" @click="addToCart">
                 <i class="fa-solid fa-cart-plus"></i>&ensp;Thêm vào giỏ hàng
               </button>
-              <router-link :to="{ name: 'PurchaseProducts' }">
+              <!-- <router-link :to="{ name: 'PurchaseProducts' }"> -->
                 <button type="button" class="button-buy-now" @click="buyNow">
                   Mua Ngay
                 </button>
-              </router-link>
+              <!-- </router-link> -->
               <!-- <button type="button" class="button-buy-now" @click="buyNow">Mua Ngay</button> -->
             </div>
           </div>
@@ -203,17 +203,25 @@ const addToCart = async () => {
 
     const status = await counterStore.addItemToCustomerCart(data);
     if (status === 200) {
-      message.success("Đã thêm sản phẩm vào giỏ hàng!");
+      counterStore.listCarts = await counterStore.fetchListCustomerCart(idCustom)
+      counterStore.countCart()
+      // counterStore.countC = counterStore.listCarts.length
     } else {
       message.error("Thêm sản phẩm không thành công!");
     }
   } catch (error) {
-    message.error("Somethings wrong!! You should comeback later.");
+    // message.error("Somethings wrong!! You should comeback later.");
     console.log(error);
   }
 };
 const buyNow = async () => {
   const productId = route.params.id;
+  const idCustomer = JSON.parse(localStorage.getItem("idCustomer")) || '';
+  if(idCustomer === '')
+  {
+    message.error("Vui lòng đăng nhập")
+    return
+  }
   if(selectSize.value === null)
     {
       return message.error("Vui lòng chọn size");

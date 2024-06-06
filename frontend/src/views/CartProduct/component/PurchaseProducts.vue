@@ -300,6 +300,7 @@ onMounted(async () => {
   counterStore.productTicked();
   await counterStore.getTypeShip();
   await counterStore.fetchInfoDelivery(idCustom);
+  console.log(counterStore.getListInfo)
   for (let i = 0; i < counterStore.getAllTypeShip.length; i++) {
     getTypeShip.value.push({
       label: counterStore.getAllTypeShip[i].type,
@@ -339,7 +340,8 @@ const handleDelete = async () => {
   if (!valueOne.value) {
     message.error("Vui lòng chọn 1 địa chỉ mà bạn muốn xoá!");
   } else {
-    const result = await counterStore.deleteAddressUser(valueOne.value);
+    const result = await counterStore.deleteInDelivery(valueOne.value);
+    console.log("result", result)
     if (result.statusCode === 200) {
       message.success("Đã xoá thành công địa chỉ!");
       resetForm()

@@ -113,6 +113,19 @@ export const deleteCart = async (cartId) => {
   }
 };
 
+//PATCH
+export const updateCartCustomer = async (data) => {
+  try {
+    const res = await request.put_from_be(`api/shop-cart/update`, data);
+    if(res.data) {
+      return res.data;
+    }
+    return res;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 ///Order from backend
 export const getOrder = async (cartId) => {
   try {
@@ -329,19 +342,6 @@ export const addToCart = async (data) => {
   try {
     const tempp = JSON.parse(localStorage.getItem("idCustomer"));
     const res = await request.put(`customerCarts/${tempp}`, data);
-    return res;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-
-//PATCH
-export const updateCartCustomer = async (data, customerId) => {
-  try {
-    const res = await request.patch(`customerCarts/${customerId}/cart`, {
-      cart: data,
-    });
     return res;
   } catch (error) {
     console.log(error);

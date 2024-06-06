@@ -65,18 +65,20 @@ export default {
       };
 
       this.orders.forEach(order => {
-        if (this.isWithinThisWeek(order.createdAt)) {
-          const readableStatus = this.getReadableStatus(order.statusOrder);
+        // if (this.isWithinThisWeek(order.createdAt)) {
+          
+        // }
+        const readableStatus = this.getReadableStatus(order.statusOrder);
           if (result[readableStatus] !== undefined) {
             result[readableStatus]++;
           }
-        }
       });
 
       return result;
     },
     createChart() {
       const weeklyOrderStatus = this.calculateWeeklyOrderStatus();
+      console.log(weeklyOrderStatus)
       const ctx = document.getElementById('myChart').getContext('2d');
 
       // Đăng ký các thành phần cần thiết
@@ -115,7 +117,7 @@ export default {
       let totalRevenue = 0;
 
       this.orders.forEach(order => {
-        if (this.isWithinThisWeek(order.createdAt) && order.statusOrder === 'S6') {
+        if (order.statusOrder === 'S6') {
           totalRevenue += order.totalPrice;
         }
       });

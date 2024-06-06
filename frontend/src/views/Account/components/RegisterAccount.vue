@@ -53,7 +53,7 @@
       </a-form-item>
 
       <a-form-item
-        label="phone number:"
+        label="Phone number:"
         name="phoneNumber"
         :rules="[
           { required: true, message: 'Please input your phone number!' },
@@ -65,26 +65,6 @@
         ]"
       >
         <a-input v-model:value="formState.phoneNumber" class="border-none" />
-      </a-form-item>
-
-      <a-form-item
-        label="Birthday:"
-        name="birthday"
-        :rules="[
-          { required: true, message: 'Please input your birthday!' },
-          {
-            validator: validateBirthday,
-            message:
-              'Please enter a valid birthday in the format dd/mm/yyyy and not in the future',
-            trigger: ['blur', 'change'],
-          },
-        ]"
-      >
-        <a-date-picker
-          v-model:value="formState.birthday"
-          format="DD/MM/YYYY"
-          class="border-none"
-        />
       </a-form-item>
 
       <a-form-item
@@ -208,22 +188,6 @@ const validateStrongPassword = (_, value) => {
 //   }
 // }
 
-const validateBirthday = (_, value) => {
-  const selectedDate = new Date(value);
-
-  if (isNaN(selectedDate.getTime())) {
-    // Invalid date
-    return Promise.reject("Invalid date format");
-  }
-
-  // Check if the date is not in the future
-  const currentDate = new Date();
-  if (selectedDate > currentDate) {
-    return Promise.reject("Birthday cannot be in the future");
-  }
-
-  return Promise.resolve();
-};
 const registerAcc = async () => {
   await nextTick();
   formRef.value.validate().then( async (valid) => {
