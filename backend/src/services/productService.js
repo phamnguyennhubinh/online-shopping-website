@@ -325,6 +325,7 @@ const getAllProductUser = async (data) => {
       raw: true,
       nest: true,
     };
+
     // Filtering and sorting conditions
     if (data.limit && data.offset) {
       objectFilter.limit = +data.limit;
@@ -342,74 +343,85 @@ const getAllProductUser = async (data) => {
     if (data.keyword && data.keyword !== "") {
       objectFilter.where.name = { [Op.substring]: data.keyword };
     }
+
     let res = await db.Product.findAndCountAll(objectFilter);
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
-    const productsWithDetails = [];
 
-    for (const product of res.rows) {
-      const images = await db.sequelize.query(
-        `
-        SELECT image FROM product_images WHERE productDetailId = ${product.id}
-      `,
-        { type: db.sequelize.QueryTypes.SELECT }
-      );
-
-      const imagesBase64 = [];
-      try {
-        for (const img of images) {
-          const imagePath = path.join(__dirname, "../..", "uploads", img.image);
-          await fs.stat(imagePath);
-          const data = await fs.readFile(imagePath);
-          const imageData = data.toString("base64");
-          const imageBase64 = `data:image/jpeg;base64,${imageData}`;
-          imagesBase64.push({
-            image: imageBase64,
-          });
+    const seenProducts = new Set();
+    const productsWithDetails = await Promise.all(
+      res.rows.map(async (product) => {
+        if (seenProducts.has(product.id)) {
+          return null; // Skip duplicate product
         }
-      } catch (error) {
-        console.error(
-          `Error processing images for product ID ${product.id}: ${error.message}`
-        );
-        continue;
-      }
+        seenProducts.add(product.id);
 
-      if (!productsWithDetails.find((item) => item.id === product.id)) {
         const productDetail = product.productDetailData;
         const brand = product.brandData ? product.brandData.value : "";
-        const status = product.statusData ? product.statusData.value : "";
-        let image = "";
+        const category = product.categoryData ? product.categoryData.value : "";
+
+        let imagesBase64 = [];
 
         if (productDetail && productDetail.productImageData) {
-          const firstImage = Array.isArray(productDetail.productImageData)
-            ? productDetail.productImageData[0]
-            : productDetail.productImageData;
-          image = firstImage ? firstImage.image : "";
+          const images = Array.isArray(productDetail.productImageData)
+            ? productDetail.productImageData
+            : [productDetail.productImageData];
+
+          for (const img of images) {
+            try {
+              const imagePath = path.join(
+                __dirname,
+                "../..",
+                "uploads",
+                img.image
+              );
+              await fs.stat(imagePath);
+              const data = await fs.readFile(imagePath);
+              const imageData = data.toString("base64");
+              const imageBase64 = `data:image/jpeg;base64,${imageData}`;
+              imagesBase64.push({
+                image: imageBase64,
+              });
+            } catch (error) {
+              console.error(
+                `Error processing image for product ID ${product.id}:`,
+                error
+              );
+            }
+          }
         }
 
-        productsWithDetails.push({
+        return {
           id: product.id,
           name: product.name,
-          category: product.categoryData.value,
+          category: category,
           view: product.view,
           brand: brand,
-          status: status,
           images: imagesBase64,
-          originalPrice: productDetail.originalPrice || "",
-          discountPrice: productDetail.discountPrice || "",
-        });
-      }
-    }
+          originalPrice: productDetail ? productDetail.originalPrice || "" : "",
+          discountPrice: productDetail ? productDetail.discountPrice || "" : "",
+        };
+      })
+    );
+
+    // Filter out null entries from the productsWithDetails array
+    const filteredProductsWithDetails = productsWithDetails.filter(
+      (product) => product !== null
+    );
 
     return {
-      result: productsWithDetails,
+      result: filteredProductsWithDetails,
       statusCode: 200,
-      errors: ["Get all products by user successfully!"],
+      message: "Get all products by user successfully!",
     };
   } catch (error) {
-    console.error(error);
-    return errorResponse(error.message);
+    console.error("Error retrieving products:", error);
+    return {
+      statusCode: 500,
+      message: "Internal server error",
+      error: error.message,
+    };
   }
 };
 
