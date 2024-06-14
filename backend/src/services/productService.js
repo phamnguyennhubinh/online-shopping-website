@@ -56,7 +56,9 @@ function getSizeDetails(size) {
       return null;
   }
 }
+
 // PRODUCT
+
 const createProduct = async (data) => {
   try {
     // Check for missing required parameters
@@ -78,11 +80,22 @@ const createProduct = async (data) => {
       return errorResponse("Failed to create product");
     }
 
-    // Create product details
+    // Process colors
     const arrayColor = data.color.split(",").map((item) => item.trim());
     const productDetails = [];
     for (const color of arrayColor) {
       try {
+        // Check if the color exists in the all_codes table
+        let colorCode = await db.AllCode.findOne({ where: { code: color } });
+        if (!colorCode) {
+          // Insert the new color into the all_codes table
+          colorCode = await db.AllCode.create({
+            type: "COLOR",
+            code: color,
+            value: color,
+          });
+        }
+
         const productDetail = await db.ProductDetail.create({
           productId: product.id,
           color: color,
@@ -97,13 +110,20 @@ const createProduct = async (data) => {
         for (const size of arraySize) {
           try {
             const sizeInfo = getSizeDetails(size);
-            await db.ProductSize.create({
+            if (!sizeInfo) {
+              console.error(`Invalid size: ${size}`);
+              continue;
+            }
+            console.log("Size:", size, sizeInfo);
+
+            const productSize = await db.ProductSize.create({
               productDetailId: productDetail.id,
+              sizeId: size,
               height: sizeInfo.height,
               weight: sizeInfo.weight,
-              sizeId: size,
             });
 
+            console.log("Size created:", productSize);
             const receipt = await db.Receipt.create({ userId, supplierId });
             if (receipt) {
               await db.ReceiptDetail.create({
@@ -140,8 +160,7 @@ const createProduct = async (data) => {
         );
       }
     }
-
-    return successResponse("Product created successfully");
+    return successResponse("Product created");
   } catch (error) {
     console.error("Error creating product:", error);
     return errorResponse(error.message);
@@ -263,7 +282,6 @@ const getAllProductAdmin = async (data) => {
         });
       }
     }
-
     return {
       result: productsWithDetails,
       statusCode: 200,
@@ -400,18 +418,39 @@ const getProductById = async (data) => {
     if (!data || !data.id) {
       return missingRequiredParams("id is");
     }
-
     const { id } = data;
 
-    // Fetch product details with associated data
-    const productDetails = await db.ProductDetail.findAndCountAll({
+    // Fetch the product to get the current view count
+    const product = await db.Product.findOne({
+      where: { id },
+      attributes: ["id", "view"],
+      raw: true,
+    });
+
+    if (!product) {
+      return notFound("Product");
+    }
+    // Ensure the view count is treated as a number
+    const currentView = Number(product.view);
+    const updatedView = currentView + 1;
+
+    // Increment the view count
+    await db.Product.update({ view: updatedView }, { where: { id } });
+
+    // Fetch product details with associated data, including colors
+    const productDetails = await db.ProductDetail.findAll({
+      where: { productId: id },
       include: [
         {
           model: db.ProductImage,
           as: "productImageData",
           attributes: ["id", "image"],
         },
-        { model: db.ProductSize, as: "sizeData", attributes: ["id", "sizeId"] },
+        {
+          model: db.ProductSize,
+          as: "sizeData",
+          attributes: ["id", "sizeId", "height", "weight"],
+        },
         {
           model: db.Product,
           as: "productData",
@@ -420,91 +459,104 @@ const getProductById = async (data) => {
             {
               model: db.AllCode,
               as: "brandData",
-              attributes: ["value", "code"],
+              attributes: ["id", "value", "code"],
             },
             {
               model: db.AllCode,
               as: "categoryData",
-              attributes: ["value", "code"],
+              attributes: ["id", "value", "code"],
             },
           ],
-          where: { id: id },
         },
       ],
-      attributes: ["color", "originalPrice", "discountPrice"],
+      attributes: ["id", "originalPrice", "discountPrice"],
       raw: true,
       nest: true,
     });
 
+    if (!productDetails.length) {
+      return notFound("Product details");
+    }
+
+    const firstProductDetail = productDetails[0];
+    const {
+      id: productId,
+      originalPrice,
+      discountPrice,
+      productData: { name, content, brandData, categoryData, statusId },
+    } = firstProductDetail;
+
+    // Fetch additional data for colors
     const colors = await db.sequelize.query(
       `
-    SELECT all_codes.* FROM product_details left join all_codes on product_details.color = all_codes.code where productId = ${data.id}
-    `,
+      SELECT all_codes.*
+      FROM product_details
+      LEFT JOIN all_codes
+      ON product_details.color = all_codes.code
+      WHERE product_details.productId = ${id}
+      `,
       { type: db.sequelize.QueryTypes.SELECT }
     );
 
     const images = await db.sequelize.query(
       `
-    SELECT image FROM product_images where productDetailId = ${data.id}
-  `,
-      { type: db.sequelize.QueryTypes.SELECT }
+      SELECT image FROM product_images
+      WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
+      `,
+      { replacements: { productId: id }, type: db.sequelize.QueryTypes.SELECT }
     );
 
-    const sizes = await db.sequelize.query(
-      `
-    SELECT * FROM product_sizes where productDetailId = ${data.id}
-  `,
-      { type: db.sequelize.QueryTypes.SELECT }
-    );
-    // If no product details found, return error
-    if (!productDetails.rows.length) {
-      return notFound("Product details");
-    }
+    const imageSet = new Set();
+    const imagesBase64 = await Promise.all(
+      images.map(async (img) => {
+        try {
+          const imagePath = path.join(__dirname, "../..", "uploads", img.image);
+          await fs.stat(imagePath);
+          const data = await fs.readFile(imagePath);
+          const imageData = data.toString("base64");
 
-    // Extract common properties from the first product detail
-    const firstProductDetail = productDetails.rows[0];
-    const {
-      originalPrice,
-      discountPrice,
-      productData: { name, content, view, brandData, categoryData, statusId },
-    } = firstProductDetail;
+          if (!imageSet.has(imageData)) {
+            imageSet.add(imageData);
+            return {
+              image: `data:image/jpeg;base64,${imageData}`,
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error("Error converting image to base64:", error);
+          return null;
+        }
+      })
+    ).then((results) => results.filter((result) => result !== null));
 
-    // Iterate through each product detail
-    productDetails.rows.forEach((productDetail) => {
-      // Push image to the array if it exists
-      if (
-        productDetail.productImageData &&
-        productDetail.productImageData.image &&
-        !images.some((image) => image.id === productDetail.productImageData.id)
-      ) {
-        images.push({
-          id: productDetail.productImageData.id,
-          name: productDetail.productImageData.image,
+    // Map sizes to the correct format
+    const uniqueSizes = new Set();
+    const sizes = productDetails.reduce((acc, detail) => {
+      const sizeData = detail.sizeData;
+      if (Array.isArray(sizeData)) {
+        sizeData.forEach((size) => {
+          if (!uniqueSizes.has(size.sizeId)) {
+            acc.push(size);
+            uniqueSizes.add(size.sizeId);
+          }
         });
+      } else if (sizeData) {
+        // Handle single size
+        const size = sizeData;
+        if (!uniqueSizes.has(size.sizeId)) {
+          acc.push(size);
+          uniqueSizes.add(size.sizeId);
+        }
       }
-    });
+      return acc;
+    }, []);
 
-    const imagesBase64 = [];
-    try {
-      for (const img of images) {
-        const imagePath = path.join(__dirname, "../..", "uploads", img.image);
-        await fs.stat(imagePath);
-        const data = await fs.readFile(imagePath);
-        const imageData = data.toString("base64");
-        const imageBase64 = `data:image/jpeg;base64,${imageData}`;
-        imagesBase64.push({
-          image: imageBase64,
-        });
-      }
-    } catch (error) {
-      return errorResponse(error.message);
-    }
     return {
       result: {
         id,
         name,
         content,
-        view,
+        view: updatedView,
         originalPrice,
         discountPrice,
         brand: brandData,
@@ -512,7 +564,7 @@ const getProductById = async (data) => {
         images: imagesBase64,
         statusId,
         sizes,
-        colors,
+        color: colors,
       },
       statusCode: 200,
       errors: ["Get all product details successfully!"],
@@ -825,36 +877,6 @@ const deleteProductDetail = async (data) => {
 };
 
 // PRODUCT IMAGE
-
-// const uploadFiles = async (files) => {
-//   const uploadDirectory = "./uploads";
-
-//   try {
-//     await fs.access(uploadDirectory);
-//   } catch (error) {
-//     await fs.mkdir(uploadDirectory);
-//   }
-
-//   const fileUploadPromises = files.map(async (file) => {
-//     const fileExtension = path.extname(file.originalname);
-//     const fileName = `${Date.now()}${fileExtension}`;
-//     const filePath = path.join(uploadDirectory, fileName);
-
-//     await fs.rename(file.path, filePath);
-//     return fileName;
-//   });
-
-//   return Promise.all(fileUploadPromises);
-// };
-
-// const saveProductImages = async (productDetailId, imagePaths) => {
-//   const imageRecords = imagePaths.map((imagePath) => ({
-//     productDetailId,
-//     image: imagePath,
-//   }));
-
-//   await db.ProductImage.bulkCreate(imageRecords);
-// };
 
 const uploadFiles = async (files) => {
   const uploadDirectory = "./uploads";
