@@ -63,7 +63,7 @@ const createProduct = async (data) => {
   try {
     // Check for missing required parameters
     if (!data.categoryId || !data.brandId) {
-      return missingRequiredParams("Category, Brand are");
+      return missingRequiredParams("Category, Brand are required");
     }
 
     // Create product
@@ -83,63 +83,26 @@ const createProduct = async (data) => {
     // Process colors
     const arrayColor = data.color.split(",").map((item) => item.trim());
     const productDetails = [];
+
     for (const color of arrayColor) {
-      try {
-        // Check if the color exists in the all_codes table
-        let colorCode = await db.AllCode.findOne({ where: { code: color } });
-        if (!colorCode) {
-          // Insert the new color into the all_codes table
-          colorCode = await db.AllCode.create({
-            type: "COLOR",
-            code: color,
-            value: color,
-          });
-        }
-
-        const productDetail = await db.ProductDetail.create({
-          productId: product.id,
-          color: color,
-          originalPrice: data.originalPrice,
-          discountPrice: data.discountPrice,
+      // Check if the color exists in the all_codes table
+      let colorCode = await db.AllCode.findOne({ where: { code: color } });
+      if (!colorCode) {
+        // Insert the new color into the all_codes table
+        colorCode = await db.AllCode.create({
+          type: "COLOR",
+          code: color,
+          value: color,
         });
-        productDetails.push(productDetail);
-
-        // Create sizes and associate them with product details
-        const arraySize = data.size.split(",").map((item) => item.trim());
-        const { userId, supplierId, quantity, price } = data;
-        for (const size of arraySize) {
-          try {
-            const sizeInfo = getSizeDetails(size);
-            if (!sizeInfo) {
-              console.error(`Invalid size: ${size}`);
-              continue;
-            }
-            console.log("Size:", size, sizeInfo);
-
-            const productSize = await db.ProductSize.create({
-              productDetailId: productDetail.id,
-              sizeId: size,
-              height: sizeInfo.height,
-              weight: sizeInfo.weight,
-            });
-
-            console.log("Size created:", productSize);
-            const receipt = await db.Receipt.create({ userId, supplierId });
-            if (receipt) {
-              await db.ReceiptDetail.create({
-                receiptId: receipt.id,
-                sizeId: size,
-                quantity,
-                price,
-              });
-            }
-          } catch (error) {
-            console.error("Error creating product size or receipt:", error);
-          }
-        }
-      } catch (error) {
-        console.error("Error creating product detail:", error);
       }
+
+      const productDetail = await db.ProductDetail.create({
+        productId: product.id,
+        color: color,
+        originalPrice: data.originalPrice,
+        discountPrice: data.discountPrice,
+      });
+      productDetails.push(productDetail);
     }
 
     // Check if product detail creation was successful
@@ -147,19 +110,59 @@ const createProduct = async (data) => {
       return errorResponse("Failed to create product details");
     }
 
-    // Upload and save product images
-    const imagePaths = await uploadFiles(data.files);
+    // Create sizes and associate them with product details
+    const arraySize = data.size.split(",").map((item) => item.trim());
+    const { userId, supplierId, quantity, price } = data;
+    const sizeMap = new Map();
+
+    for (const size of arraySize) {
+      const sizeInfo = getSizeDetails(size);
+      if (!sizeInfo) {
+        console.error(`Invalid size: ${size}`);
+        continue;
+      }
+      sizeMap.set(size, sizeInfo);
+    }
+
+    const receipt = await db.Receipt.create({ userId, supplierId });
+    if (!receipt) {
+      return errorResponse("Failed to create receipt");
+    }
+
     for (const productDetail of productDetails) {
-      try {
-        await saveProductImages(productDetail.id, imagePaths);
-      } catch (error) {
-        console.error(
-          "Error saving product images for ProductDetail:",
-          productDetail.id,
-          error
-        );
+      for (const [size, sizeInfo] of sizeMap.entries()) {
+        const productSize = await db.ProductSize.create({
+          productDetailId: productDetail.id,
+          sizeId: size,
+          height: sizeInfo.height,
+          weight: sizeInfo.weight,
+        });
+
+        await db.ReceiptDetail.create({
+          receiptId: receipt.id,
+          sizeId: productSize.id,
+          quantity,
+          price,
+        });
       }
     }
+
+    // Upload and save unique product images
+    const imagePaths = await uploadFiles(data.files);
+    const uniqueImageNames = new Set(
+      imagePaths.map((path) => path.split("/").pop())
+    );
+
+    // Save unique images to the database and associate with product details if necessary
+    for (const imageName of uniqueImageNames) {
+      for (const productDetail of productDetails) {
+        await db.ProductImage.create({
+          productDetailId: productDetail.id,
+          image: `${imageName}`,
+        });
+      }
+    }
+
     return successResponse("Product created");
   } catch (error) {
     console.error("Error creating product:", error);
@@ -576,7 +579,7 @@ const getProductById = async (data) => {
         images: imagesBase64,
         statusId,
         sizes,
-        color: colors,
+        colors: colors,
       },
       statusCode: 200,
       errors: ["Get all product details successfully!"],
@@ -630,11 +633,10 @@ const activeProduct = async (data) => {
 };
 
 const updateProduct = async (data) => {
-  console.log(data.productId);
   try {
     // Check if productId is provided
     if (!data.productId) {
-      return missingRequiredParams("productId is");
+      return missingRequiredParams("productId is required");
     }
 
     // Check if product exists
@@ -656,66 +658,61 @@ const updateProduct = async (data) => {
     );
 
     // Update product details
-    let ProductDetails = await db.ProductDetail.findAll({
-      where: { productId: data.productId },
-    });
-    if (ProductDetails.length > 0) {
-      await db.ProductDetail.destroy({
-        where: { productId: data.productId },
-      });
-    }
-    const arrayColor = data.color.split(/[,]/);
+    await db.ProductDetail.destroy({ where: { productId: data.productId } });
+    const arrayColor = data.color.split(",").map((item) => item.trim());
+    const productDetails = [];
     for (const color of arrayColor) {
-      try {
-        await db.ProductDetail.create({
-          productId: data.productId,
-          color: color,
-          originalPrice: data.originalPrice,
-          discountPrice: data.discountPrice,
-        });
-        // productDetails.push(productDetail);
-      } catch (error) {
-        console.error("Error creating product detail:", error);
-      }
+      const productDetail = await db.ProductDetail.create({
+        productId: data.productId,
+        color: color,
+        originalPrice: data.originalPrice,
+        discountPrice: data.discountPrice,
+      });
+      productDetails.push(productDetail);
     }
 
-    let productSize = await db.ProductSize.findAll({
+    // Update product sizes
+    await db.ProductSize.destroy({
       where: { productDetailId: data.productId },
     });
-
-    if (productSize.length > 0) {
-      await db.ProductSize.destroy({
-        where: { productDetailId: data.productId },
-      });
-    }
-    const arraySize = data.size.split(/[,]/);
-    console.log(arraySize);
+    const arraySize = data.size.split(",").map((item) => item.trim());
+    const sizeMap = new Map();
     for (const size of arraySize) {
-      try {
-        const sizeInfo = getSizeDetails(size);
+      const sizeInfo = getSizeDetails(size);
+      if (!sizeInfo) {
+        console.error(`Invalid size: ${size}`);
+        continue;
+      }
+      sizeMap.set(size, sizeInfo);
+    }
+    for (const productDetail of productDetails) {
+      for (const [size, sizeInfo] of sizeMap.entries()) {
         await db.ProductSize.create({
-          productDetailId: data.productId,
+          productDetailId: productDetail.id,
+          sizeId: size,
           height: sizeInfo.height,
           weight: sizeInfo.weight,
-          sizeId: size,
         });
-      } catch (error) {
-        console.error("Error creating product detail:", error);
       }
     }
 
     // Upload and save new product images if files are provided
-    if (data.files) {
-      let productImgs = await db.ProductImage.findAll({
+    if (data.images) {
+      await db.ProductImage.destroy({
         where: { productDetailId: data.productId },
       });
-      if (productImgs.length > 0) {
-        await db.ProductImage.destroy({
-          where: { productDetailId: data.productId },
-        });
+      const imagePaths = await uploadFiles(data.images);
+      const uniqueImageNames = new Set(
+        imagePaths.map((path) => path.split("/").pop())
+      );
+      for (const imageName of uniqueImageNames) {
+        for (const productDetail of productDetails) {
+          await db.ProductImage.create({
+            productDetailId: productDetail.id,
+            image: `${imageName}`,
+          });
+        }
       }
-      const imagePaths = await uploadFiles(data.files);
-      await saveProductImages(data.productId, imagePaths);
     }
 
     return successResponse("Product updated");
@@ -728,33 +725,74 @@ const updateProduct = async (data) => {
 const deleteProduct = async (productId) => {
   try {
     if (!productId) {
-      return missingRequiredParams("Product ID is");
+      return missingRequiredParams("Product ID is required");
     }
+
     await db.sequelize.transaction(async (transaction) => {
       const product = await db.Product.findOne({
         where: { id: productId },
         transaction,
       });
+
       if (!product) {
         return notFound("Product");
       }
+
+      // Find all product details for the given product
       const productDetails = await db.ProductDetail.findAll({
         where: { productId },
         transaction,
       });
+
+      // Extract product detail IDs
       const productDetailIds = productDetails.map((detail) => detail.id);
+
+      // Delete associated images
       await db.ProductImage.destroy({
         where: { productDetailId: productDetailIds },
         transaction,
       });
+
+      // Delete associated sizes
       await db.ProductSize.destroy({
-        where: { productDetailId: productId },
+        where: { productDetailId: productDetailIds },
+        transaction,
       });
-      await db.ProductDetail.destroy({ where: { productId }, transaction });
-      await db.Product.destroy({ where: { id: productId }, transaction });
+
+      // Find receipts associated with the product details
+      const receiptDetails = await db.ReceiptDetail.findAll({
+        where: { sizeId: productDetailIds },
+        transaction,
+      });
+
+      const receiptIds = receiptDetails.map((detail) => detail.receiptId);
+
+      // Delete associated receipt details
+      await db.ReceiptDetail.destroy({
+        where: { sizeId: productDetailIds },
+        transaction,
+      });
+
+      // Delete associated receipts
+      await db.Receipt.destroy({
+        where: { id: receiptIds },
+        transaction,
+      });
+
+      // Delete product details
+      await db.ProductDetail.destroy({
+        where: { productId },
+        transaction,
+      });
+
+      // Finally, delete the product
+      await db.Product.destroy({
+        where: { id: productId },
+        transaction,
+      });
     });
 
-    return successResponse("Delete product successfully");
+    return successResponse("Product deleted successfully");
   } catch (error) {
     console.error(error);
     return errorResponse(error.message);
