@@ -1,4 +1,6 @@
 import db from "../models/index";
+const fs = require("fs").promises;
+const path = require("path");
 import {
   successResponse,
   errorResponse,
@@ -39,20 +41,54 @@ const calculateStock = async (sizeId, orderDetails) => {
 const addShopCart = async (data, orderDetails) => {
   try {
     if (!data.userId || !data.sizeId || !data.quantity) {
-      return missingRequiredParams("user, size, quantity are");
+      return missingRequiredParams("user, size, quantity are required");
     }
 
+    // Calculate the available stock for the specified sizeId
     const stock = await calculateStock(data.sizeId, orderDetails);
     if (+data.quantity > stock) {
       return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
     } else {
-      await db.ShopCart.create({
+      // Find the productDetail associated with the sizeId
+      const productSize = await db.ProductSize.findOne({
+        where: { id: data.sizeId },
+        include: [
+          {
+            model: db.ProductDetail,
+            as: "productDetailData",
+            attributes: ["productId"],
+          },
+        ],
+        raw: true,
+        nest: true,
+      });
+
+      if (!productSize) {
+        return errorResponse(
+          `Product size not found for sizeId: ${data.sizeId}`
+        );
+      }
+
+      // Add the item to the shopping cart
+      const shopCartItem = await db.ShopCart.create({
         userId: data.userId,
         sizeId: data.sizeId,
         quantity: data.quantity,
         statusId: 0,
       });
-      return successResponse("Add items into shop cart");
+
+      // Return success response with productId and sizeId
+      return {
+        result: {
+          userId: data.userId,
+          sizeId: data.sizeId,
+          productId: productSize.productDetailData.productId,
+          quantity: data.quantity,
+          statusId: 0,
+        },
+        statusCode: 200,
+        errors: ["Add items into shop cart successfully!"],
+      };
     }
   } catch (error) {
     console.error("Error in addShopCart:", error);
@@ -62,42 +98,141 @@ const addShopCart = async (data, orderDetails) => {
 
 const updateShopCart = async (data, orderDetails) => {
   try {
-    const { userId, sizeId, quantity } = data;
-    if (!userId || !sizeId || !quantity) {
-      return missingRequiredParams("user, size, quantity are");
+    const { itemId, userId, sizeId, quantity } = data;
+
+    if (!itemId || !userId || !sizeId || !quantity) {
+      return missingRequiredParams(
+        "itemId, userId, sizeId, and quantity are required."
+      );
     }
 
     const stock = await calculateStock(sizeId, orderDetails);
+
     if (+quantity > stock) {
-      return errorResponse(`Chỉ còn ${stock} sản phẩm`, 2, stock);
+      return errorResponse(`Only ${stock} items left in stock.`, 2, stock);
     }
-    let [updatedRowsCount] = await db.ShopCart.update(
-      { quantity },
+
+    const [updatedRowsCount, updatedShopCart] = await db.ShopCart.update(
+      { quantity, sizeId },
       {
         where: {
           userId,
-          sizeId,
-          statusId: 0, // Giỏ hàng chưa thanh toán
+          id: itemId,
+          statusId: 0,
         },
+        returning: true, // Ensure it returns the updated row
       }
     );
 
     if (updatedRowsCount === 0) {
-      await db.ShopCart.create({
+      const newCartItem = await db.ShopCart.create({
         userId,
         sizeId,
         quantity,
         statusId: 0,
       });
-      return successResponse("Add items into shop cart");
+
+      return successResponse(
+        "Item added to the shopping cart successfully.",
+        newCartItem
+      );
     }
 
-    return successResponse("Update shop cart successfully");
+    return successResponse(
+      "Shopping cart updated successfully.",
+      updatedShopCart
+    );
   } catch (error) {
-    console.error("Error in updateShopCart:", error);
-    return errorResponse("Error from server");
+    console.error("Error in updateCartItem:", error);
+    return errorResponse("Error updating shopping cart.");
   }
 };
+
+// const getShopCartByUserId = async (userId) => {
+//   if (!userId) {
+//     return missingRequiredParams("userId");
+//   }
+
+//   try {
+//     const shopCartItems = await db.ShopCart.findAll({
+//       where: { userId },
+//       raw: true,
+//     });
+
+//     if (shopCartItems.length === 0) {
+//       return notFound(
+//         `No shop cart items found for the user with userId ${userId}`
+//       );
+//     }
+
+//     const productDetailsPromises = shopCartItems.map(async (item) => {
+//       const productSize = await db.ProductSize.findOne({
+//         where: { id: item.sizeId },
+//         include: [
+//           {
+//             model: db.ProductDetail,
+//             as: "productDetailData",
+//             include: [
+//               {
+//                 model: db.Product,
+//                 as: "productData",
+//                 attributes: ["id", "name"],
+//               },
+//               {
+//                 model: db.ProductImage,
+//                 as: "productImageData",
+//                 attributes: ["image"],
+//               },
+//             ],
+//             attributes: [
+//               "id",
+//               "productId",
+//               "color",
+//               "originalPrice",
+//               "discountPrice",
+//             ],
+//           },
+//         ],
+//         attributes: ["id", "productDetailId", "sizeId"],
+//         raw: true,
+//         nest: true,
+//       });
+
+//       if (!productSize || !productSize.productDetailData) {
+//         return { ...item, productDetailNotFound: true };
+//       }
+
+//       const { productDetailData } = productSize;
+//       const total = item.quantity * productDetailData.discountPrice;
+
+//       return {
+//         ...item,
+//         productId: productDetailData.productData.id,
+//         name: productDetailData.productData.name,
+//         image:
+//           productDetailData.productImageData.length > 0
+//             ? productDetailData.productImageData[0].image
+//             : null,
+//         color: productDetailData.color,
+//         originalPrice: productDetailData.originalPrice,
+//         discountPrice: productDetailData.discountPrice,
+//         size: productSize.sizeId,
+//         total,
+//       };
+//     });
+
+//     const productDetails = await Promise.all(productDetailsPromises);
+
+//     return {
+//       result: productDetails,
+//       statusCode: 200,
+//       errors: [`Get shop cart by userId = ${userId}!`],
+//     };
+//   } catch (error) {
+//     console.error("Error in getShopCartByUserId:", error);
+//     return errorResponse(error.message);
+//   }
+// };
 
 const getShopCartByUserId = async (userId) => {
   if (!userId) {
@@ -154,17 +289,59 @@ const getShopCartByUserId = async (userId) => {
       }
 
       const { productDetailData } = productSize;
+
+      // Fetch additional data for colors
+      const colors = await db.sequelize.query(
+        `
+        SELECT all_codes.*
+        FROM product_details
+        LEFT JOIN all_codes
+        ON product_details.color = all_codes.code
+        WHERE product_details.productId = ${productDetailData.productId}
+        `,
+        { type: db.sequelize.QueryTypes.SELECT }
+      );
+
+      // Fetch images for the product
+      const images = await db.ProductImage.findAll({
+        where: {
+          productDetailId: productDetailData.id,
+        },
+        attributes: ["image"],
+        raw: true,
+      });
+
+      // Convert images to base64
+      const imagesBase64 = await Promise.all(
+        images.map(async (img) => {
+          try {
+            const imagePath = path.join(
+              __dirname,
+              "../..",
+              "uploads",
+              img.image
+            );
+            await fs.stat(imagePath);
+            const data = await fs.readFile(imagePath);
+            const imageData = data.toString("base64");
+            return {
+              image: `data:image/jpeg;base64,${imageData}`,
+            };
+          } catch (error) {
+            console.error("Error converting image to base64:", error);
+            return null; // Return null for failed conversions
+          }
+        })
+      ).then((results) => results.filter((result) => result !== null));
+
       const total = item.quantity * productDetailData.discountPrice;
 
       return {
         ...item,
-        productId: productDetailData.productData.id,
+        id: productDetailData.productId,
         name: productDetailData.productData.name,
-        image:
-          productDetailData.productImageData.length > 0
-            ? productDetailData.productImageData[0].image
-            : null,
-        color: productDetailData.color,
+        colors,
+        images: imagesBase64,
         originalPrice: productDetailData.originalPrice,
         discountPrice: productDetailData.discountPrice,
         size: productSize.sizeId,
@@ -177,7 +354,7 @@ const getShopCartByUserId = async (userId) => {
     return {
       result: productDetails,
       statusCode: 200,
-      errors: [`Get shop cart by userId = ${userId} successfully!`],
+      errors: [`Get shop cart by userId = ${userId}!`],
     };
   } catch (error) {
     console.error("Error in getShopCartByUserId:", error);

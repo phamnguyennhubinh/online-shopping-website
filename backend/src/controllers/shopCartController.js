@@ -13,13 +13,13 @@ const addShopCart = async (req, res) => {
 
 const updateShopCart = async (req, res) => {
   try {
-    const data = await shopCartService.updateShopCart(req.body);
-    return res.status(200).json(data);
+    const data = await shopCartService.updateShopCart(req.body, req.orderDetails || {});
+    return res.status(data.statusCode || 200).json(data);
   } catch (error) {
     console.error("Error in updateShopCart:", error);
-    return res.status(500).json(errorResponse("Error from server"));
+    return res.status(500).json(errorResponse("Error from server", 500));
   }
-};
+}
 
 const getShopCartByUserId = async (req, res) => {
   try {
