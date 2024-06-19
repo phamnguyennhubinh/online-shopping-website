@@ -3,6 +3,8 @@ import db from "../models/index";
 const { Op } = require("sequelize");
 var querystring = require("qs");
 var crypto = require("crypto");
+const fs = require("fs").promises;
+const path = require("path");
 require("dotenv").config();
 import {
   successResponse,
@@ -18,11 +20,11 @@ const createOrder = async (data) => {
       !data.typeShipId ||
       !data.userId ||
       !data.arrDataShopCart ||
-      !data.shipAddress ||
+      // !data.shipAddress ||
       data.arrDataShopCart.length === 0
     ) {
       return missingRequiredParams(
-        "addressUserId, typeShipId, userId, shipAddress, and arrDataShopCart"
+        "addressUserId, typeShipId, userId and arrDataShopCart"
       );
     }
 
@@ -161,91 +163,170 @@ const getAllOrders = async (data) => {
       };
     }
 
-    // Fetch addressUser information for orders
     let addressUsers = await db.AddressUser.findAll({
       where: { id: { [Op.in]: rows.map((order) => order.addressUserId) } },
       raw: true,
       nest: true,
     });
 
-    // Fetch order details for the orders
     let orderDetails = await db.OrderDetail.findAll({
       where: { orderId: rows.map((order) => order.id) },
       raw: true,
       nest: true,
     });
 
-    // Fetch product details for the order details
     let productIds = orderDetails.map((detail) => detail.productId);
-    
+
     let productDetails = await db.ProductDetail.findAll({
       where: { productId: productIds },
-      include: [{ model: db.Product, as: "productData", raw: true }],
+      include: [
+        { model: db.Product, as: "productData", raw: true },
+        {
+          model: db.ProductImage,
+          as: "productImageData",
+          attributes: ["id", "image"],
+        },
+        {
+          model: db.ProductSize,
+          as: "sizeData",
+          attributes: ["id", "sizeId", "height", "weight"],
+        },
+      ],
       raw: true,
       nest: true,
     });
 
-    // Map addressUser information to orders
     const addressUserMap = addressUsers.reduce((acc, addressUser) => {
       acc[addressUser.id] = addressUser;
       return acc;
     }, {});
 
-    // Formatting code...
-    const formattedRows = rows.map((order) => {
-      const addressUser = addressUserMap[order.addressUserId] || {};
-      const statusOrder = order.statusId;
-      const typeShip = order.typeShipData || {};
-
-      const orderDetailData = orderDetails.filter(
-        (detail) => detail.orderId === order.id
-      );
-      const products = orderDetailData.map((detail) => {
-        const productDetail = productDetails.find(
-          (product) => product.productId === detail.productId
-        );
-        const product = productDetail?.productData || {};
-
-        const quantity = detail.quantity || 0;
-        const realPrice = detail.realPrice || 0;
-        return {
-          productName: product.name || "",
-          quantity,
-          productId: productDetail.productId,
-          priceProduct: realPrice,
-          color: productDetail?.color || "",
+    const formattedRows = await Promise.all(
+      rows.map(async (order) => {
+        const addressUser = addressUserMap[order.addressUserId] || {};
+        const statusOrder = order.statusOrderData?.value || "";
+        const typeShip = {
+          type: order.typeShipData?.type || "",
+          price: order.typeShipData?.price || 0,
         };
-      });
 
-      // Calculate totalPrice for the order
-      const totalPrice =
-        products.reduce(
-          (acc, product) => acc + product.quantity * product.priceProduct,
-          0
-        ) + (typeShip.price || 0);
+        const orderDetailData = orderDetails.filter(
+          (detail) => detail.orderId === order.id
+        );
+        const products = await Promise.all(
+          orderDetailData.map(async (detail) => {
+            const productDetail = productDetails.find(
+              (product) => product.productId === detail.productId
+            );
+            const product = productDetail?.productData || {};
+            const colors = await db.sequelize.query(
+              `
+              SELECT all_codes.*
+              FROM product_details
+              LEFT JOIN all_codes
+              ON product_details.color = all_codes.code
+              WHERE product_details.productId = ${productIds}
+              `,
+              { type: db.sequelize.QueryTypes.SELECT }
+            );
+            const images = await db.sequelize.query(
+              `
+              SELECT image FROM product_images
+              WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
+              `,
+              {
+                replacements: { productId: productIds },
+                type: db.sequelize.QueryTypes.SELECT,
+              }
+            );
 
-      return {
-        id: order.id,
-        addressUser: {
-          userId: addressUser.userId || null,
-          shipName: addressUser.shipName || "",
-          shipAddress: addressUser.shipAddress || "",
-          shipEmail: addressUser.shipEmail || "",
-          shipPhoneNumber: addressUser.shipPhoneNumber || "",
-        },
-        statusOrder,
-        typeShip: {
-          type: typeShip.type || "",
-          price: typeShip.price || 0,
-        },
-        note: order.note || "",
-        isPaymentOnline: order.isPaymentOnline || 0,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt,
-        products: products,
-        totalPrice: totalPrice,
-      };
-    });
+            const imageSet = new Set();
+            const imagesBase64 = await Promise.all(
+              images.map(async (img) => {
+                try {
+                  const imagePath = path.join(
+                    __dirname,
+                    "../..",
+                    "uploads",
+                    img.image
+                  );
+                  await fs.stat(imagePath);
+                  const data = await fs.readFile(imagePath);
+                  const imageData = data.toString("base64");
+
+                  if (!imageSet.has(imageData)) {
+                    imageSet.add(imageData);
+                    return {
+                      image: `data:image/jpeg;base64,${imageData}`,
+                    };
+                  }
+                  return null;
+                } catch (error) {
+                  console.error("Error converting image to base64:", error);
+                  return null;
+                }
+              })
+            ).then((results) => results.filter((result) => result !== null));
+
+            // Map sizes to the correct format
+            const uniqueSizes = new Set();
+            const sizes = productDetails.reduce((acc, detail) => {
+              const sizeData = detail.sizeData;
+              if (Array.isArray(sizeData)) {
+                sizeData.forEach((size) => {
+                  if (!uniqueSizes.has(size.sizeId)) {
+                    acc.push(size);
+                    uniqueSizes.add(size.sizeId);
+                  }
+                });
+              } else if (sizeData) {
+                // Handle single size
+                const size = sizeData;
+                if (!uniqueSizes.has(size.sizeId)) {
+                  acc.push(size);
+                  uniqueSizes.add(size.sizeId);
+                }
+              }
+              return acc;
+            }, []);
+            const quantity = detail.quantity || 0;
+            const realPrice = detail.realPrice || 0;
+            return {
+              productName: product.name || "",
+              quantity,
+              productId: productDetail.productId,
+              priceProduct: realPrice,
+              colors: colors,
+              sizes,
+              image: imagesBase64,
+            };
+          })
+        );
+
+        const totalPrice =
+          products.reduce((acc, product) => acc + product.priceProduct, 0) +
+          (typeShip.price || 0);
+
+        return {
+          id: order.id,
+          addressUser: {
+            userId: addressUser.userId || null,
+            shipName: addressUser.shipName || "",
+            shipAddress: addressUser.shipAddress || "",
+            shipEmail: addressUser.shipEmail || "",
+            shipPhoneNumber: addressUser.shipPhoneNumber || "",
+          },
+          statusOrder,
+          typeShip,
+          note: order.note || "",
+          isPaymentOnline: order.isPaymentOnline || 0,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          products,
+          totalPrice,
+        };
+      })
+    );
 
     return {
       result: formattedRows,
@@ -263,7 +344,6 @@ const getAllOrders = async (data) => {
 };
 
 const getOrderById = async (data) => {
-  
   try {
     if (!data.id) {
       return missingRequiredParams("id");
@@ -278,24 +358,16 @@ const getOrderById = async (data) => {
       raw: true,
       nest: true,
     });
-    
+
     if (!order) {
       return notFound(`Order with id ${data.id}`);
     }
 
     let addressUser = await db.AddressUser.findOne({
       where: { id: order.addressUserId },
+      raw: true,
+      nest: true,
     });
-
-    if (!addressUser) {
-      return notFound(`AddressUser for order with id ${data.id}`);
-    }
-
-    let user = await db.User.findOne({ where: { id: addressUser.userId } });
-
-    if (!user) {
-      return notFound(`User for AddressUser with id ${addressUser.id}`);
-    }
 
     let orderDetails = await db.OrderDetail.findAll({
       where: { orderId: order.id },
@@ -303,39 +375,153 @@ const getOrderById = async (data) => {
       nest: true,
     });
 
-    // Lặp qua mỗi order detail và lấy thông tin sản phẩm cho từng chi tiết đơn hàng
-    for (let i = 0; i < orderDetails.length; i++) {
-      let productData = await db.Product.findOne({
-        where: { id: orderDetails[i].productId },
-      });
+    let productIds = orderDetails.map((detail) => detail.productId);
 
-      orderDetails[i].productData = productData;
-    }
-    let result = {
-      orderId: order.id,
+    let productDetails = await db.ProductDetail.findAll({
+      where: { productId: productIds },
+      include: [
+        { model: db.Product, as: "productData", raw: true },
+        {
+          model: db.ProductImage,
+          as: "productImageData",
+          attributes: ["id", "image"],
+        },
+        {
+          model: db.ProductSize,
+          as: "sizeData",
+          attributes: ["id", "sizeId", "height", "weight"],
+        },
+      ],
+      raw: true,
+      nest: true,
+    });
+
+    const products = await Promise.all(
+      orderDetails.map(async (detail) => {
+        const productDetail = productDetails.find(
+          (product) => product.productId === detail.productId
+        );
+        const product = productDetail?.productData || {};
+
+        const colors = await db.sequelize.query(
+          `
+          SELECT all_codes.*
+          FROM product_details
+          LEFT JOIN all_codes
+          ON product_details.color = all_codes.code
+          WHERE product_details.productId = ${detail.productId}
+          `,
+          { type: db.sequelize.QueryTypes.SELECT }
+        );
+
+        const images = await db.sequelize.query(
+          `
+          SELECT image FROM product_images
+          WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
+          `,
+          {
+            replacements: { productId: detail.productId },
+            type: db.sequelize.QueryTypes.SELECT,
+          }
+        );
+
+        const imageSet = new Set();
+        const imagesBase64 = await Promise.all(
+          images.map(async (img) => {
+            try {
+              const imagePath = path.join(
+                __dirname,
+                "../..",
+                "uploads",
+                img.image
+              );
+              await fs.stat(imagePath);
+              const data = await fs.readFile(imagePath);
+              const imageData = data.toString("base64");
+
+              if (!imageSet.has(imageData)) {
+                imageSet.add(imageData);
+                return {
+                  image: `data:image/jpeg;base64,${imageData}`,
+                };
+              }
+              return null;
+            } catch (error) {
+              console.error("Error converting image to base64:", error);
+              return null;
+            }
+          })
+        ).then((results) => results.filter((result) => result !== null));
+
+        const uniqueSizes = new Set();
+        const sizes = productDetails.reduce((acc, detail) => {
+          const sizeData = detail.sizeData;
+          if (Array.isArray(sizeData)) {
+            sizeData.forEach((size) => {
+              if (!uniqueSizes.has(size.sizeId)) {
+                acc.push(size);
+                uniqueSizes.add(size.sizeId);
+              }
+            });
+          } else if (sizeData) {
+            if (!uniqueSizes.has(sizeData.sizeId)) {
+              acc.push(sizeData);
+              uniqueSizes.add(sizeData.sizeId);
+            }
+          }
+          return acc;
+        }, []);
+
+        return {
+          productName: product.name || "",
+          quantity: detail.quantity || 0,
+          productId: productDetail.productId,
+          priceProduct: detail.realPrice || 0,
+          colors: colors,
+          sizes: sizes,
+          image: imagesBase64,
+        };
+      })
+    );
+
+    const totalPrice =
+      products.reduce((acc, product) => acc + product.priceProduct, 0) +
+      (order.typeShipData?.price || 0);
+
+    const result = {
+      id: order.id,
       addressUser: {
-        userId: addressUser.userId,
-        shipName: addressUser.shipName,
-        shipAddress: addressUser.shipAddress,
-        shipEmail: addressUser.shipEmail,
-        shipPhoneNumber: addressUser.shipPhoneNumber,
+        userId: addressUser?.userId || null,
+        shipName: addressUser?.shipName || "",
+        shipAddress: addressUser?.shipAddress || "",
+        shipEmail: addressUser?.shipEmail || "",
+        shipPhoneNumber: addressUser?.shipPhoneNumber || "",
       },
-      status: order.statusOrderData.value,
-      typeShip: order.typeShipData.type,
-      note: order.note,
-      isPaymentOnline: order.isPaymentOnline,
+      statusOrder: order.statusOrderData?.value || "",
+      typeShip: {
+        type: order.typeShipData?.type || "",
+        price: order.typeShipData?.price || 0,
+      },
+      note: order.note || "",
+      isPaymentOnline: order.isPaymentOnline || 0,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+      products: products,
+      totalPrice: totalPrice,
     };
 
     return {
       result: result,
       statusCode: 200,
-      errors: ["Success!"],
+      errors: [`Get order with id = ${data.id} successfully!`],
     };
   } catch (error) {
     console.error("Error:", error);
-    return errorResponse(error.message);
+    return {
+      result: [],
+      statusCode: 500,
+      errors: [error.message],
+    };
   }
 };
 
@@ -383,56 +569,195 @@ const getAllOrdersByUser = async (userId) => {
     if (!userId) {
       return missingRequiredParams("userId");
     }
+
     const addressUsers = await db.AddressUser.findAll({
       where: { userId: userId },
+      raw: true,
+      nest: true,
     });
-    const result = [];
-    for (let i = 0; i < addressUsers.length; i++) {
-      const orders = await db.Order.findAll({
-        where: { addressUserId: addressUsers[i].id },
-        include: [
-          { model: db.AllCode, as: "statusOrderData" },
-          { model: db.TypeShip, as: "typeShipData" },
-        ],
-        raw: true,
-        nest: true,
-      });
-      for (let j = 0; j < orders.length; j++) {
-        const orderDetail = await db.OrderDetail.findAll({
-          where: { orderId: orders[j].id },
-        });
-        const totalPrice = orderDetail.reduce(
-          (acc, curr) => acc + curr.price,
-          0
-        );
-        const quantity = orderDetail.reduce(
-          (acc, curr) => acc + curr.quantity,
-          0
-        );
 
-        const formattedOrder = {
-          id: orders[j].id,
-          status: orders[j].statusOrderData.value,
-          typeShip: orders[j].typeShipData.value,
-          totalPrice: totalPrice,
-          quantity: quantity,
-          isPaymentOnline: orders[j].isPaymentOnline,
-          image: orders[j].image,
-          createdAt: orders[j].createdAt,
-          updatedAt: orders[j].updatedAt,
+    const addressUserIds = addressUsers.map((addressUser) => addressUser.id);
+
+    let orders = await db.Order.findAll({
+      where: { addressUserId: addressUserIds },
+      include: [
+        { model: db.AllCode, as: "statusOrderData" },
+        { model: db.TypeShip, as: "typeShipData" },
+      ],
+      raw: true,
+      nest: true,
+    });
+
+    let orderIds = orders.map((order) => order.id);
+
+    let orderDetails = await db.OrderDetail.findAll({
+      where: { orderId: orderIds },
+      raw: true,
+      nest: true,
+    });
+
+    let productIds = orderDetails.map((detail) => detail.productId);
+
+    let productDetails = await db.ProductDetail.findAll({
+      where: { productId: productIds },
+      include: [
+        { model: db.Product, as: "productData", raw: true },
+        {
+          model: db.ProductImage,
+          as: "productImageData",
+          attributes: ["id", "image"],
+        },
+        {
+          model: db.ProductSize,
+          as: "sizeData",
+          attributes: ["id", "sizeId", "height", "weight"],
+        },
+      ],
+      raw: true,
+      nest: true,
+    });
+
+    const addressUserMap = addressUsers.reduce((acc, addressUser) => {
+      acc[addressUser.id] = addressUser;
+      return acc;
+    }, {});
+
+    const formattedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const addressUser = addressUserMap[order.addressUserId] || {};
+        const statusOrder = order.statusOrderData?.value || "";
+        const typeShip = {
+          type: order.typeShipData?.type || "",
+          price: order.typeShipData?.price || 0,
         };
 
-        result.push(formattedOrder);
-      }
-    }
+        const orderDetailData = orderDetails.filter(
+          (detail) => detail.orderId === order.id
+        );
+
+        const products = await Promise.all(
+          orderDetailData.map(async (detail) => {
+            const productDetail = productDetails.find(
+              (product) => product.productId === detail.productId
+            );
+            const product = productDetail?.productData || {};
+            const colors = await db.sequelize.query(
+              `
+              SELECT all_codes.*
+              FROM product_details
+              LEFT JOIN all_codes
+              ON product_details.color = all_codes.code
+              WHERE product_details.productId = ${productDetail.productId}
+              `,
+              { type: db.sequelize.QueryTypes.SELECT }
+            );
+            const images = await db.sequelize.query(
+              `
+              SELECT image FROM product_images
+              WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
+              `,
+              {
+                replacements: { productId: productDetail.productId },
+                type: db.sequelize.QueryTypes.SELECT,
+              }
+            );
+
+            const imageSet = new Set();
+            const imagesBase64 = await Promise.all(
+              images.map(async (img) => {
+                try {
+                  const imagePath = path.join(
+                    __dirname,
+                    "../..",
+                    "uploads",
+                    img.image
+                  );
+                  await fs.stat(imagePath);
+                  const data = await fs.readFile(imagePath);
+                  const imageData = data.toString("base64");
+
+                  if (!imageSet.has(imageData)) {
+                    imageSet.add(imageData);
+                    return {
+                      image: `data:image/jpeg;base64,${imageData}`,
+                    };
+                  }
+                  return null;
+                } catch (error) {
+                  console.error("Error converting image to base64:", error);
+                  return null;
+                }
+              })
+            ).then((results) => results.filter((result) => result !== null));
+
+            const uniqueSizes = new Set();
+            const sizes = productDetails.reduce((acc, detail) => {
+              const sizeData = detail.sizeData;
+              if (Array.isArray(sizeData)) {
+                sizeData.forEach((size) => {
+                  if (!uniqueSizes.has(size.sizeId)) {
+                    acc.push(size);
+                    uniqueSizes.add(size.sizeId);
+                  }
+                });
+              } else if (sizeData) {
+                if (!uniqueSizes.has(sizeData.sizeId)) {
+                  acc.push(sizeData);
+                  uniqueSizes.add(sizeData.sizeId);
+                }
+              }
+              return acc;
+            }, []);
+
+            return {
+              productName: product.name || "",
+              quantity: detail.quantity || 0,
+              productId: productDetail.productId,
+              priceProduct: detail.realPrice || 0,
+              colors,
+              sizes,
+              image: imagesBase64,
+            };
+          })
+        );
+
+        const totalPrice =
+          products.reduce((acc, product) => acc + product.priceProduct, 0) +
+          (typeShip.price || 0);
+
+        return {
+          id: order.id,
+          addressUser: {
+            userId: addressUser.userId || null,
+            shipName: addressUser.shipName || "",
+            shipAddress: addressUser.shipAddress || "",
+            shipEmail: addressUser.shipEmail || "",
+            shipPhoneNumber: addressUser.shipPhoneNumber || "",
+          },
+          statusOrder,
+          typeShip,
+          note: order.note || "",
+          isPaymentOnline: order.isPaymentOnline || 0,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          products,
+          totalPrice,
+        };
+      })
+    );
+
     return {
-      result: result,
-      statusCode: 0,
+      result: formattedOrders,
+      statusCode: 200,
       errors: ["Retrieved all orders by user successfully!"],
     };
   } catch (error) {
-    console.error("Errors", error);
-    return errorResponse(error.message);
+    console.error("Error:", error);
+    return {
+      result: [],
+      statusCode: 500,
+      errors: [error.message],
+    };
   }
 };
 
