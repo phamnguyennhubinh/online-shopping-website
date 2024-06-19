@@ -20,23 +20,23 @@ const createOrder = async (data) => {
       !data.typeShipId ||
       !data.userId ||
       !data.arrDataShopCart ||
-      // !data.shipAddress ||
       data.arrDataShopCart.length === 0
     ) {
       return missingRequiredParams(
-        "addressUserId, typeShipId, userId and arrDataShopCart"
+        "addressUserId, typeShipId, userId, and arrDataShopCart"
       );
     }
 
-    // Tạo đơn hàng
+    // Create the order
     const order = await db.Order.create({
       addressUserId: data.addressUserId,
-      isPaymentOnline: data.isPaymentOnline || 0, // Thanh toán Online hay COD
-      statusId: "S3", // Chờ xác nhận
+      isPaymentOnline: data.isPaymentOnline || 0, // Payment type: Online or COD
+      statusId: "S3", // Waiting for confirmation
       typeShipId: data.typeShipId,
       note: data.note || "",
     });
 
+    // Create or update address details
     await db.AddressUser.create({
       userId: data.userId,
       shipName: data.userId,
@@ -45,7 +45,7 @@ const createOrder = async (data) => {
       shipPhoneNumber: data.shipPhoneNumber,
     });
 
-    // Thêm chi tiết đơn hàng từ shop cart
+    // Add order details from shop cart
     const orderDetails = [];
     for (const item of data.arrDataShopCart) {
       const productDetail = await db.ProductDetail.findOne({
@@ -57,7 +57,7 @@ const createOrder = async (data) => {
           orderId: order.id,
           productId: item.productId,
           quantity: item.quantity,
-          // Lấy giá thực tế từ productDetail và tính toán giá cuối cùng
+          // Get the actual price from productDetail and calculate the final price
           realPrice:
             item.quantity *
             (productDetail.discountPrice || productDetail.originalPrice),
@@ -66,17 +66,16 @@ const createOrder = async (data) => {
         console.error(
           `Product detail not found for productId: ${item.productId}`
         );
-        // Xử lý lỗi nếu cần
       }
     }
 
-    // Tạo các chi tiết đơn hàng
+    // Create order details
     await db.OrderDetail.bulkCreate(orderDetails);
 
-    // Xóa sản phẩm đã đặt khỏi shop cart
+    // Remove items from shop cart
     await db.ShopCart.destroy({ where: { userId: data.userId, statusId: 0 } });
 
-    // Cập nhật số lượng tồn kho của sản phẩm
+    // Update inventory quantities
     for (const cartItem of data.arrDataShopCart) {
       const productSize = await db.ProductSize.findByPk(cartItem.productId);
       if (productSize) {
@@ -86,6 +85,7 @@ const createOrder = async (data) => {
         );
       }
     }
+
     return {
       result: [
         {
@@ -169,8 +169,10 @@ const getAllOrders = async (data) => {
       nest: true,
     });
 
+    let orderIds = rows.map((order) => order.id);
+
     let orderDetails = await db.OrderDetail.findAll({
-      where: { orderId: rows.map((order) => order.id) },
+      where: { orderId: orderIds },
       raw: true,
       nest: true,
     });
@@ -213,34 +215,38 @@ const getAllOrders = async (data) => {
         const orderDetailData = orderDetails.filter(
           (detail) => detail.orderId === order.id
         );
+
         const products = await Promise.all(
-          orderDetailData.map(async (detail) => {
+          orderDetails.map(async (detail) => {
             const productDetail = productDetails.find(
               (product) => product.productId === detail.productId
             );
             const product = productDetail?.productData || {};
+
             const colors = await db.sequelize.query(
               `
               SELECT all_codes.*
               FROM product_details
               LEFT JOIN all_codes
               ON product_details.color = all_codes.code
-              WHERE product_details.productId = ${productIds}
+              WHERE product_details.productId = ${detail.productId}
               `,
               { type: db.sequelize.QueryTypes.SELECT }
             );
+
+            // Fetch images related to the product
             const images = await db.sequelize.query(
               `
               SELECT image FROM product_images
               WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
               `,
               {
-                replacements: { productId: productIds },
+                replacements: { productId: detail.productId },
                 type: db.sequelize.QueryTypes.SELECT,
               }
             );
 
-            const imageSet = new Set();
+            // Convert images to base64
             const imagesBase64 = await Promise.all(
               images.map(async (img) => {
                 try {
@@ -253,14 +259,7 @@ const getAllOrders = async (data) => {
                   await fs.stat(imagePath);
                   const data = await fs.readFile(imagePath);
                   const imageData = data.toString("base64");
-
-                  if (!imageSet.has(imageData)) {
-                    imageSet.add(imageData);
-                    return {
-                      image: `data:image/jpeg;base64,${imageData}`,
-                    };
-                  }
-                  return null;
+                  return `data:image/jpeg;base64,${imageData}`;
                 } catch (error) {
                   console.error("Error converting image to base64:", error);
                   return null;
@@ -289,16 +288,18 @@ const getAllOrders = async (data) => {
               }
               return acc;
             }, []);
+
             const quantity = detail.quantity || 0;
             const realPrice = detail.realPrice || 0;
+
             return {
               productName: product.name || "",
               quantity,
-              productId: productDetail.productId,
+              productId: product.productId,
               priceProduct: realPrice,
-              colors: colors,
+              colors,
               sizes,
-              image: imagesBase64,
+              images: imagesBase64,
             };
           })
         );
