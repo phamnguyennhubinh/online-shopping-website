@@ -9,6 +9,7 @@ import {
   errorResponse,
   missingRequiredParams,
   notFound,
+  notValid,
 } from "../utils/ResponseUtils";
 
 function dynamicSort(property) {
@@ -642,10 +643,10 @@ const updateProduct = async (data) => {
     // Check if product exists
     const product = await db.Product.findOne({ where: { id: data.productId } });
     if (!product) {
-      return notValid("Product not found");
+      return notFound("Product");
     }
 
-    // Update product
+    // Update product basic information
     await db.Product.update(
       {
         name: data.name,
@@ -657,61 +658,38 @@ const updateProduct = async (data) => {
       { where: { id: data.productId } }
     );
 
-    // Update product details
-    await db.ProductDetail.destroy({ where: { productId: data.productId } });
-    const arrayColor = data.color.split(",").map((item) => item.trim());
-    const productDetails = [];
-    for (const color of arrayColor) {
-      const productDetail = await db.ProductDetail.create({
-        productId: data.productId,
-        color: color,
-        originalPrice: data.originalPrice,
-        discountPrice: data.discountPrice,
-      });
-      productDetails.push(productDetail);
-    }
-
-    // Update product sizes
-    await db.ProductSize.destroy({
-      where: { productDetailId: data.productId },
+    // Get updated product details
+    const productDetails = await db.ProductDetail.findAll({
+      where: { productId: data.productId },
     });
-    const arraySize = data.size.split(",").map((item) => item.trim());
-    const sizeMap = new Map();
-    for (const size of arraySize) {
-      const sizeInfo = getSizeDetails(size);
-      if (!sizeInfo) {
-        console.error(`Invalid size: ${size}`);
-        continue;
-      }
-      sizeMap.set(size, sizeInfo);
-    }
+
+    // Update product details (originalPrice and discountPrice)
     for (const productDetail of productDetails) {
-      for (const [size, sizeInfo] of sizeMap.entries()) {
-        await db.ProductSize.create({
-          productDetailId: productDetail.id,
-          sizeId: size,
-          height: sizeInfo.height,
-          weight: sizeInfo.weight,
-        });
-      }
+      await db.ProductDetail.update(
+        {
+          originalPrice: data.originalPrice,
+          discountPrice: data.discountPrice,
+        },
+        { where: { id: productDetail.id } }
+      );
     }
 
-    // Upload and save new product images if files are provided
-    if (data.images) {
+    // Process images if provided
+    if (data.files && data.files.length > 0) {
+      // Delete existing product images for the updated product details
       await db.ProductImage.destroy({
-        where: { productDetailId: data.productId },
+        where: { productDetailId: productDetails.map((pd) => pd.id) },
       });
-      const imagePaths = await uploadFiles(data.images);
-      const uniqueImageNames = new Set(
-        imagePaths.map((path) => path.split("/").pop())
-      );
-      for (const imageName of uniqueImageNames) {
-        for (const productDetail of productDetails) {
-          await db.ProductImage.create({
-            productDetailId: productDetail.id,
-            image: `${imageName}`,
-          });
-        }
+
+      // Upload and save unique product images
+      const imagePaths = await uploadFiles(data.files);
+
+      // Save unique images to the database and associate with product details
+      for (const imagePath of imagePaths) {
+        await db.ProductImage.create({
+          productDetailId: productDetails[0].id, // Assuming all product details share the same image set
+          image: imagePath,
+        });
       }
     }
 
