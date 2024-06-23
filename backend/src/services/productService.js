@@ -432,7 +432,7 @@ const getAllProductUser = async (data) => {
 const getProductById = async (data) => {
   try {
     if (!data || !data.id) {
-      return missingRequiredParams("id is");
+      return missingRequiredParams("id is required");
     }
     const { id } = data;
 
@@ -446,6 +446,7 @@ const getProductById = async (data) => {
     if (!product) {
       return notFound("Product");
     }
+
     // Ensure the view count is treated as a number
     const currentView = Number(product.view);
     const updatedView = currentView + 1;
@@ -453,7 +454,7 @@ const getProductById = async (data) => {
     // Increment the view count
     await db.Product.update({ view: updatedView }, { where: { id } });
 
-    // Fetch product details with associated data, including colors
+    // Fetch product details
     const productDetails = await db.ProductDetail.findAll({
       where: { productId: id },
       include: [
@@ -485,7 +486,7 @@ const getProductById = async (data) => {
           ],
         },
       ],
-      attributes: ["id", "originalPrice", "discountPrice"],
+      attributes: ["id", "originalPrice", "discountPrice", "color"],
       raw: true,
       nest: true,
     });
@@ -496,7 +497,6 @@ const getProductById = async (data) => {
 
     const firstProductDetail = productDetails[0];
     const {
-      id: productId,
       originalPrice,
       discountPrice,
       productData: { name, content, brandData, categoryData, statusId },
@@ -509,14 +509,16 @@ const getProductById = async (data) => {
       FROM product_details
       LEFT JOIN all_codes
       ON product_details.color = all_codes.code
-      WHERE product_details.productId = ${id}
+      WHERE product_details.productId = :productId
       `,
-      { type: db.sequelize.QueryTypes.SELECT }
+      { replacements: { productId: id }, type: db.sequelize.QueryTypes.SELECT }
     );
 
+    // Fetch images
     const images = await db.sequelize.query(
       `
-      SELECT image FROM product_images
+      SELECT image 
+      FROM product_images 
       WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
       `,
       { replacements: { productId: id }, type: db.sequelize.QueryTypes.SELECT }
@@ -557,7 +559,6 @@ const getProductById = async (data) => {
           }
         });
       } else if (sizeData) {
-        // Handle single size
         const size = sizeData;
         if (!uniqueSizes.has(size.sizeId)) {
           acc.push(size);
@@ -566,6 +567,30 @@ const getProductById = async (data) => {
       }
       return acc;
     }, []);
+
+    // Manually fetch a single receipt detail price and supplier name
+    const receiptDetail = await db.sequelize.query(
+      `
+      SELECT rd.price, s.name as supplierName
+      FROM receipt_details rd
+      JOIN receipts r ON rd.receiptId = r.id
+      JOIN suppliers s ON r.supplierId = s.id
+      WHERE rd.sizeId IN (
+        SELECT ps.id
+        FROM product_sizes ps
+        WHERE ps.productDetailId IN (
+          SELECT pd.id
+          FROM product_details pd
+          WHERE pd.productId = :productId
+        )
+      )
+      LIMIT 1
+      `,
+      { replacements: { productId: id }, type: db.sequelize.QueryTypes.SELECT }
+    );
+
+    const price = receiptDetail[0]?.price || null;
+    const supplier = receiptDetail[0]?.supplierName || null;
 
     return {
       result: {
@@ -580,10 +605,12 @@ const getProductById = async (data) => {
         images: imagesBase64,
         statusId,
         sizes,
-        colors: colors,
+        colors,
+        supplier,
+        price,
       },
       statusCode: 200,
-      errors: ["Get all product details successfully!"],
+      errors: [`Get product details with id = ${id} successfully!`],
     };
   } catch (error) {
     console.error("Error retrieving product details:", error);
