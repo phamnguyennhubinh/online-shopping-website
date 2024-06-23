@@ -148,92 +148,6 @@ const updateShopCart = async (data, orderDetails) => {
   }
 };
 
-// const getShopCartByUserId = async (userId) => {
-//   if (!userId) {
-//     return missingRequiredParams("userId");
-//   }
-
-//   try {
-//     const shopCartItems = await db.ShopCart.findAll({
-//       where: { userId },
-//       raw: true,
-//     });
-
-//     if (shopCartItems.length === 0) {
-//       return notFound(
-//         `No shop cart items found for the user with userId ${userId}`
-//       );
-//     }
-
-//     const productDetailsPromises = shopCartItems.map(async (item) => {
-//       const productSize = await db.ProductSize.findOne({
-//         where: { id: item.sizeId },
-//         include: [
-//           {
-//             model: db.ProductDetail,
-//             as: "productDetailData",
-//             include: [
-//               {
-//                 model: db.Product,
-//                 as: "productData",
-//                 attributes: ["id", "name"],
-//               },
-//               {
-//                 model: db.ProductImage,
-//                 as: "productImageData",
-//                 attributes: ["image"],
-//               },
-//             ],
-//             attributes: [
-//               "id",
-//               "productId",
-//               "color",
-//               "originalPrice",
-//               "discountPrice",
-//             ],
-//           },
-//         ],
-//         attributes: ["id", "productDetailId", "sizeId"],
-//         raw: true,
-//         nest: true,
-//       });
-
-//       if (!productSize || !productSize.productDetailData) {
-//         return { ...item, productDetailNotFound: true };
-//       }
-
-//       const { productDetailData } = productSize;
-//       const total = item.quantity * productDetailData.discountPrice;
-
-//       return {
-//         ...item,
-//         productId: productDetailData.productData.id,
-//         name: productDetailData.productData.name,
-//         image:
-//           productDetailData.productImageData.length > 0
-//             ? productDetailData.productImageData[0].image
-//             : null,
-//         color: productDetailData.color,
-//         originalPrice: productDetailData.originalPrice,
-//         discountPrice: productDetailData.discountPrice,
-//         size: productSize.sizeId,
-//         total,
-//       };
-//     });
-
-//     const productDetails = await Promise.all(productDetailsPromises);
-
-//     return {
-//       result: productDetails,
-//       statusCode: 200,
-//       errors: [`Get shop cart by userId = ${userId}!`],
-//     };
-//   } catch (error) {
-//     console.error("Error in getShopCartByUserId:", error);
-//     return errorResponse(error.message);
-//   }
-// };
-
 const getShopCartByUserId = async (userId) => {
   if (!userId) {
     return missingRequiredParams("userId");
@@ -338,7 +252,8 @@ const getShopCartByUserId = async (userId) => {
 
       return {
         ...item,
-        id: productDetailData.productId,
+        id: item.id, // Keep the original shopCartItem id
+        productId: productDetailData.productId,
         name: productDetailData.productData.name,
         colors,
         images: imagesBase64,
