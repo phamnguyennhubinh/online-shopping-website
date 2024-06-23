@@ -417,15 +417,11 @@ const getAllProductUser = async (data) => {
     return {
       result: filteredProductsWithDetails,
       statusCode: 200,
-      message: "Get all products by user successfully!",
+      errors: "Get all products by user successfully!",
     };
   } catch (error) {
     console.error("Error retrieving products:", error);
-    return {
-      statusCode: 500,
-      message: "Internal server error",
-      error: error.message,
-    };
+    return errorResponse(error.message)
   }
 };
 

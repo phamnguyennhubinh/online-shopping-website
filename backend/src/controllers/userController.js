@@ -4,12 +4,14 @@ const { errorResponse, successResponse } = require("../utils/ResponseUtils");
 const handleRequest = async (handler, req, res) => {
   try {
     const data = await handler(req.body);
-    const statusCode = data.statusCode || 500;
-    console.log(data);
+    if (!data) {
+      return res.status(500).json(errorResponse(error.message));
+    }
+    const statusCode = data.statusCode === 0 ? 200 : 500;
     return res.status(statusCode).json(data);
   } catch (error) {
-    console.log(error);
-    return res.status(500).json(errorResponse());
+    console.error(error);
+    return res.status(500).json(errorResponse(error.message));
   }
 };
 
@@ -39,10 +41,11 @@ const getAllUser = async (req, res) => {
 
 const getUserById = async (req, res) => {
   try {
-    const data = await userService.getUserById(req.query.id);
+    const { id } = req.query;
+    const data = await userService.getUserById(id);
     return res.status(200).json(data);
   } catch (error) {
-    console.error(error);
+    console.error("Error in getUserById:", error);
     return res.status(500).json(errorResponse("Error from server"));
   }
 };
@@ -51,7 +54,7 @@ const checkUserPhoneNumber = async (req, res) => {
   return handleRequest(userService.checkPhoneNumber, req, res);
 };
 
-module.exports = {
+export default {
   registerUser,
   loginUser,
   updateUser,

@@ -9,6 +9,11 @@ module.exports = (sequelize, DataTypes) => {
         targetKey: "code",
         as: "roleData",
       });
+      User.belongsTo(models.AllCode, {
+        foreignKey: "statusId",
+        targetKey: "code",
+        as: "statusData",
+      });
     }
   }
 

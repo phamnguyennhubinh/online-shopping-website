@@ -108,32 +108,69 @@ const deleteUser = async (userId) => {
     return successResponse("Deleted user");
   } catch (error) {
     console.log(error);
-    return errorResponse();
+    return errorResponse(error.message);
   }
 };
 
 const updateUser = async (data) => {
   try {
+    console.log("Received data:", data); // Log received data for debugging
+
+    // Validate presence of 'id' in data
     if (!data.id) {
-      return missingRequiredParams("userId");
+      return {
+        statusCode: 400,
+        errors: ["id is required!"],
+      };
     }
-    let user = await db.User.findOne({ where: { id: data.id } });
-    if (!user) {
-      return userNotExist();
+
+    const updateFields = {};
+    if (data.email) {
+      updateFields.email = data.email;
     }
-    user.fullName = data.fullName;
-    user.address = data.address;
-    user.roleId = data.roleId;
-    user.phoneNumber = data.phoneNumber;
-    user.dob = data.dob;
+    if (data.fullName) {
+      updateFields.fullName = data.fullName;
+    }
+    if (data.address) {
+      updateFields.address = data.address;
+    }
+    if (data.phoneNumber) {
+      updateFields.phoneNumber = data.phoneNumber;
+    }
     if (data.image) {
-      user.image = data.image;
+      updateFields.image = data.image; // Assuming 'image' is correct property name
     }
-    await user.save();
-    return successResponse("Updated user");
+    if (data.dob) {
+      updateFields.dob = data.dob;
+    }
+
+    // Update user in the database
+    const [updatedRowsCount] = await db.User.update(updateFields, {
+      where: { id: data.id },
+    });
+
+    if (updatedRowsCount === 0) {
+      return {
+        statusCode: 404,
+        errors: ["User not found"],
+      };
+    }
+
+    // Fetch updated user record from the database
+    const updatedUser = await db.User.findByPk(data.id);
+
+    // Return success response
+    return {
+      result: [updatedUser],
+      statusCode: 200,
+      message: "User updated successfully",
+    };
   } catch (error) {
-    console.log(error);
-    return errorResponse();
+    console.error("Error in updateUser:", error);
+    return {
+      statusCode: 500,
+      errors: ["Failed to update User"],
+    };
   }
 };
 
@@ -155,38 +192,64 @@ const getAllUser = async (data) => {
       objectFilter.limit = +data.limit;
       objectFilter.offset = +data.offset;
     }
+    const users = await db.User.findAll(objectFilter);
+    return {
+      result: users,
+      statusCode: 200,
+      errors: "Get all users successfully!",
+    };
   } catch (error) {
     console.log(error);
-    return errorResponse();
+    return errorResponse(error.message);
   }
 };
 
-const getUserById = async (userId) => {
+const getUserById = async (id) => {
   try {
-    if (!userId) {
-      return missingRequiredParams("userId");
+    if (!id) {
+      return missingRequiredParams("id");
     }
 
-    let user = await db.User.findOne({
-      where: { id: userId, statusId: "S1" },
-      attributes: { exclude: ["password"] },
+    const user = await db.User.findOne({
+      where: { id, statusId: "S1" },
+      attributes: {
+        exclude: ["password", "createdAt", "updatedAt"],
+      },
       include: [
         { model: db.AllCode, as: "roleData", attributes: ["value", "code"] },
+        { model: db.AllCode, as: "statusData", attributes: ["value", "code"] },
       ],
+      raw: true,
+      nest: true,
     });
 
     if (!user) {
       return userNotExist();
     }
 
-    if (user.image) {
-      user.image = new Buffer.from(user.image, "base64").toString("binary");
-    }
+    let userData = {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      dob: user.dob,
+      status: user.statusData.value,
+      role: user.roleData
+        ? { code: user.roleData.code, value: user.roleData.value }
+        : null,
+      image: user.image
+        ? Buffer.from(user.image, "base64").toString("binary")
+        : null,
+    };
 
-    return successResponse(user);
+    return {
+      result: userData,
+      statusCode: 200,
+      message: "Get user by id successfully!",
+    };
   } catch (error) {
     console.error("Error in getUserById:", error);
-    return errorResponse();
+    return errorResponse("An error occurred while fetching the user");
   }
 };
 

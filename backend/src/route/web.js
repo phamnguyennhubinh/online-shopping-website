@@ -21,7 +21,7 @@ const webRoutes = (app) => {
   router.post("/api/user/login", userController.loginUser);
   router.put(
     "/api/user/update",
-    middlewareControllers.verifyTokenUser,
+    // middlewareControllers.verifyTokenUser,
     userController.updateUser
   );
   router.delete(
