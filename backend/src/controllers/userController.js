@@ -4,10 +4,8 @@ const { errorResponse, successResponse } = require("../utils/ResponseUtils");
 const handleRequest = async (handler, req, res) => {
   try {
     const data = await handler(req.body);
-    if (!data) {
-      return res.status(500).json(errorResponse(error.message));
-    }
-    const statusCode = data.statusCode === 0 ? 200 : 500;
+    const statusCode = data.statusCode || 500;
+    console.log(data);
     return res.status(statusCode).json(data);
   } catch (error) {
     console.error(error);
