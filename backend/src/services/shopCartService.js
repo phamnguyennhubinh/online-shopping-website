@@ -204,17 +204,12 @@ const getShopCartByUserId = async (userId) => {
 
       const { productDetailData } = productSize;
 
-      // Fetch additional data for colors
-      const colors = await db.sequelize.query(
-        `
-        SELECT all_codes.*
-        FROM product_details
-        LEFT JOIN all_codes
-        ON product_details.color = all_codes.code
-        WHERE product_details.productId = ${productDetailData.productId}
-        `,
-        { type: db.sequelize.QueryTypes.SELECT }
-      );
+      // Fetch color details for the specific color
+      const colorDetail = await db.AllCode.findOne({
+        where: { code: productDetailData.color },
+        attributes: ["code", "value"],
+        raw: true,
+      });
 
       // Fetch images for the product
       const images = await db.ProductImage.findAll({
@@ -255,7 +250,7 @@ const getShopCartByUserId = async (userId) => {
         id: item.id, // Keep the original shopCartItem id
         productId: productDetailData.productId,
         name: productDetailData.productData.name,
-        colors,
+        color: colorDetail,
         images: imagesBase64,
         originalPrice: productDetailData.originalPrice,
         discountPrice: productDetailData.discountPrice,
