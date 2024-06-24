@@ -48,24 +48,32 @@ const createOrder = async (data) => {
     // Add order details from shop cart
     const orderDetails = [];
     for (const item of data.arrDataShopCart) {
-      const productDetail = await db.ProductDetail.findOne({
-        where: { productId: item.productId },
+      const productSize = await db.ProductSize.findOne({
+        where: { id: item.sizeId },
+        include: [
+          {
+            model: db.ProductDetail,
+            as: "productDetailData",
+            attributes: ["productId", "discountPrice", "originalPrice"],
+          },
+        ],
+        raw: true,
+        nest: true,
       });
 
-      if (productDetail) {
+      if (productSize) {
+        const price =
+          productSize.productDetailData.discountPrice ||
+          productSize.productDetailData.originalPrice;
         orderDetails.push({
           orderId: order.id,
-          productId: item.productId,
+          productId: productSize.productDetailData.productId,
+          sizeId: item.sizeId,
           quantity: item.quantity,
-          // Get the actual price from productDetail and calculate the final price
-          realPrice:
-            item.quantity *
-            (productDetail.discountPrice || productDetail.originalPrice),
+          realPrice: item.quantity * price,
         });
       } else {
-        console.error(
-          `Product detail not found for productId: ${item.productId}`
-        );
+        console.error(`Product size not found for sizeId: ${item.sizeId}`);
       }
     }
 
@@ -77,11 +85,11 @@ const createOrder = async (data) => {
 
     // Update inventory quantities
     for (const cartItem of data.arrDataShopCart) {
-      const productSize = await db.ProductSize.findByPk(cartItem.productId);
+      const productSize = await db.ProductSize.findByPk(cartItem.sizeId);
       if (productSize) {
         await db.ProductSize.update(
           { stock: productSize.stock - cartItem.quantity },
-          { where: { productId: cartItem.productId } }
+          { where: { id: cartItem.sizeId } }
         );
       }
     }
@@ -91,11 +99,12 @@ const createOrder = async (data) => {
         {
           orderId: order.id,
           addressUserId: data.addressUserId,
-          productId: data.arrDataShopCart.map((item) => item.productId),
+          productIds: orderDetails.map((detail) => detail.productId),
+          userId: data.userId,
         },
       ],
       statusCode: 200,
-      errors: [`Create order successfully!`],
+      errors: ["Create order successfully!"],
     };
   } catch (error) {
     console.error("Error in createOrder:", error);
@@ -163,12 +172,6 @@ const getAllOrders = async (data) => {
       };
     }
 
-    let addressUsers = await db.AddressUser.findAll({
-      where: { id: { [Op.in]: rows.map((order) => order.addressUserId) } },
-      raw: true,
-      nest: true,
-    });
-
     let orderIds = rows.map((order) => order.id);
 
     let orderDetails = await db.OrderDetail.findAll({
@@ -198,6 +201,12 @@ const getAllOrders = async (data) => {
       nest: true,
     });
 
+    let addressUsers = await db.AddressUser.findAll({
+      where: { id: { [Op.in]: rows.map((order) => order.addressUserId) } },
+      raw: true,
+      nest: true,
+    });
+
     const addressUserMap = addressUsers.reduce((acc, addressUser) => {
       acc[addressUser.id] = addressUser;
       return acc;
@@ -223,28 +232,20 @@ const getAllOrders = async (data) => {
             );
             const product = productDetail?.productData || {};
 
-            const colors = await db.sequelize.query(
-              `
-              SELECT all_codes.*
-              FROM product_details
-              LEFT JOIN all_codes
-              ON product_details.color = all_codes.code
-              WHERE product_details.productId = ${detail.productId}
-              `,
-              { type: db.sequelize.QueryTypes.SELECT }
-            );
+            // Fetch colors directly from ProductDetail
+            const color = productDetail?.color || ""; // Replace with actual field name
+
+            // Fetch sizes from sizeData
+            const sizes = productDetail?.sizeData
+              ? [productDetail.sizeData]
+              : [];
 
             // Fetch images related to the product
-            const images = await db.sequelize.query(
-              `
-              SELECT image FROM product_images
-              WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
-              `,
-              {
-                replacements: { productId: detail.productId },
-                type: db.sequelize.QueryTypes.SELECT,
-              }
-            );
+            const images = await db.ProductImage.findAll({
+              where: { productDetailId: productDetail.id },
+              attributes: ["id", "image"],
+              raw: true,
+            });
 
             // Convert images to base64
             const imagesBase64 = await Promise.all(
@@ -267,28 +268,6 @@ const getAllOrders = async (data) => {
               })
             ).then((results) => results.filter((result) => result !== null));
 
-            // Map sizes to the correct format
-            const uniqueSizes = new Set();
-            const sizes = productDetails.reduce((acc, detail) => {
-              const sizeData = detail.sizeData;
-              if (Array.isArray(sizeData)) {
-                sizeData.forEach((size) => {
-                  if (!uniqueSizes.has(size.sizeId)) {
-                    acc.push(size);
-                    uniqueSizes.add(size.sizeId);
-                  }
-                });
-              } else if (sizeData) {
-                // Handle single size
-                const size = sizeData;
-                if (!uniqueSizes.has(size.sizeId)) {
-                  acc.push(size);
-                  uniqueSizes.add(size.sizeId);
-                }
-              }
-              return acc;
-            }, []);
-
             const quantity = detail.quantity || 0;
             const realPrice = detail.realPrice || 0;
 
@@ -297,7 +276,7 @@ const getAllOrders = async (data) => {
               quantity,
               productId: product.productId,
               priceProduct: realPrice,
-              colors,
+              color,
               sizes,
               images: imagesBase64,
             };
@@ -332,7 +311,7 @@ const getAllOrders = async (data) => {
     return {
       result: formattedRows,
       statusCode: 200,
-      errors: ["Get all order successfully!"],
+      errors: ["Get all orders successfully!"],
     };
   } catch (error) {
     console.error("Error:", error);
@@ -350,7 +329,8 @@ const getOrderById = async (data) => {
       return missingRequiredParams("id");
     }
 
-    let order = await db.Order.findOne({
+    // Define filter to fetch order including typeShip, statusOrder
+    let orderFilter = {
       where: { id: data.id },
       include: [
         { model: db.TypeShip, as: "typeShipData" },
@@ -358,27 +338,27 @@ const getOrderById = async (data) => {
       ],
       raw: true,
       nest: true,
-    });
+    };
+
+    // Fetch the order
+    const order = await db.Order.findOne(orderFilter);
 
     if (!order) {
       return notFound(`Order with id ${data.id}`);
     }
 
-    let addressUser = await db.AddressUser.findOne({
-      where: { id: order.addressUserId },
-      raw: true,
-      nest: true,
-    });
-
-    let orderDetails = await db.OrderDetail.findAll({
+    // Fetch order details associated with the order
+    const orderDetails = await db.OrderDetail.findAll({
       where: { orderId: order.id },
       raw: true,
       nest: true,
     });
 
-    let productIds = orderDetails.map((detail) => detail.productId);
+    // Fetch productIds associated with orderDetails
+    const productIds = orderDetails.map((detail) => detail.productId);
 
-    let productDetails = await db.ProductDetail.findAll({
+    // Fetch productDetails associated with productIds
+    const productDetails = await db.ProductDetail.findAll({
       where: { productId: productIds },
       include: [
         { model: db.Product, as: "productData", raw: true },
@@ -397,6 +377,22 @@ const getOrderById = async (data) => {
       nest: true,
     });
 
+    // Fetch addressUser associated with the order
+    const addressUser = await db.AddressUser.findOne({
+      where: { id: order.addressUserId },
+      raw: true,
+      nest: true,
+    });
+
+    if (!addressUser) {
+      return {
+        result: [],
+        statusCode: 500,
+        errors: ["AddressUser is not associated to Order!"],
+      };
+    }
+
+    // Build products array with details
     const products = await Promise.all(
       orderDetails.map(async (detail) => {
         const productDetail = productDetails.find(
@@ -404,27 +400,15 @@ const getOrderById = async (data) => {
         );
         const product = productDetail?.productData || {};
 
-        const colors = await db.sequelize.query(
-          `
-          SELECT all_codes.*
-          FROM product_details
-          LEFT JOIN all_codes
-          ON product_details.color = all_codes.code
-          WHERE product_details.productId = ${detail.productId}
-          `,
-          { type: db.sequelize.QueryTypes.SELECT }
-        );
+        // Fetch colors directly from ProductDetail
+        const colors = productDetail?.color || "";
 
-        const images = await db.sequelize.query(
-          `
-          SELECT image FROM product_images
-          WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
-          `,
-          {
-            replacements: { productId: detail.productId },
-            type: db.sequelize.QueryTypes.SELECT,
-          }
-        );
+        // Fetch images related to the product
+        const images = await db.ProductImage.findAll({
+          where: { productDetailId: productDetail.id },
+          attributes: ["id", "image"],
+          raw: true,
+        });
 
         const imageSet = new Set();
         const imagesBase64 = await Promise.all(
@@ -454,49 +438,35 @@ const getOrderById = async (data) => {
           })
         ).then((results) => results.filter((result) => result !== null));
 
-        const uniqueSizes = new Set();
-        const sizes = productDetails.reduce((acc, detail) => {
-          const sizeData = detail.sizeData;
-          if (Array.isArray(sizeData)) {
-            sizeData.forEach((size) => {
-              if (!uniqueSizes.has(size.sizeId)) {
-                acc.push(size);
-                uniqueSizes.add(size.sizeId);
-              }
-            });
-          } else if (sizeData) {
-            if (!uniqueSizes.has(sizeData.sizeId)) {
-              acc.push(sizeData);
-              uniqueSizes.add(sizeData.sizeId);
-            }
-          }
-          return acc;
-        }, []);
+        // Extract sizes from productDetails
+        const sizes = productDetail?.sizeData ? [productDetail.sizeData] : [];
 
         return {
           productName: product.name || "",
           quantity: detail.quantity || 0,
           productId: productDetail.productId,
           priceProduct: detail.realPrice || 0,
-          colors: colors,
-          sizes: sizes,
-          image: imagesBase64,
+          color: colors,
+          sizes,
+          images: imagesBase64,
         };
       })
     );
 
+    // Calculate total price including shipping type price
     const totalPrice =
       products.reduce((acc, product) => acc + product.priceProduct, 0) +
       (order.typeShipData?.price || 0);
 
+    // Construct the result object with all necessary details
     const result = {
       id: order.id,
       addressUser: {
-        userId: addressUser?.userId || null,
-        shipName: addressUser?.shipName || "",
-        shipAddress: addressUser?.shipAddress || "",
-        shipEmail: addressUser?.shipEmail || "",
-        shipPhoneNumber: addressUser?.shipPhoneNumber || "",
+        userId: addressUser.userId || null,
+        shipName: addressUser.shipName || "",
+        shipAddress: addressUser.shipAddress || "",
+        shipEmail: addressUser.shipEmail || "",
+        shipPhoneNumber: addressUser.shipPhoneNumber || "",
       },
       statusOrder: order.statusOrderData?.value || "",
       typeShip: {
@@ -507,12 +477,12 @@ const getOrderById = async (data) => {
       isPaymentOnline: order.isPaymentOnline || 0,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
-      products: products,
-      totalPrice: totalPrice,
+      products,
+      totalPrice,
     };
 
     return {
-      result: result,
+      result,
       statusCode: 200,
       errors: [`Get order with id = ${data.id} successfully!`],
     };
@@ -568,38 +538,66 @@ const updateStatusOrder = async (data) => {
 const getAllOrdersByUser = async (userId) => {
   try {
     if (!userId) {
-      return missingRequiredParams("userId");
+      return {
+        result: [],
+        statusCode: 400,
+        errors: ["Missing userId parameter"],
+      };
     }
 
+    // Step 1: Find addressUserIds associated with the userId
     const addressUsers = await db.AddressUser.findAll({
-      where: { userId: userId },
+      where: { userId },
       raw: true,
       nest: true,
     });
 
+    if (addressUsers.length === 0) {
+      return {
+        result: [],
+        statusCode: 404,
+        errors: ["User not found or has no associated addresses"],
+      };
+    }
+
+    // Step 2: Extract addressUserIds
     const addressUserIds = addressUsers.map((addressUser) => addressUser.id);
 
-    let orders = await db.Order.findAll({
+    // Step 3: Find orders related to the addressUserIds
+    const orders = await db.Order.findAll({
       where: { addressUserId: addressUserIds },
       include: [
         { model: db.AllCode, as: "statusOrderData" },
         { model: db.TypeShip, as: "typeShipData" },
       ],
+      order: [["createdAt", "DESC"]],
       raw: true,
       nest: true,
     });
 
-    let orderIds = orders.map((order) => order.id);
+    if (orders.length === 0) {
+      return {
+        result: [],
+        statusCode: 404,
+        errors: ["No orders found for this user"],
+      };
+    }
 
-    let orderDetails = await db.OrderDetail.findAll({
+    // Step 4: Extract orderIds
+    const orderIds = orders.map((order) => order.id);
+
+    // Step 5: Find order details related to the orderIds
+    const orderDetails = await db.OrderDetail.findAll({
       where: { orderId: orderIds },
       raw: true,
       nest: true,
     });
 
-    let productIds = orderDetails.map((detail) => detail.productId);
+    // Step 6: Extract productIds from orderDetails
+    const productIds = orderDetails.map((detail) => detail.productId);
 
-    let productDetails = await db.ProductDetail.findAll({
+    // Step 7: Find productDetails related to the productIds
+    const productDetails = await db.ProductDetail.findAll({
       where: { productId: productIds },
       include: [
         { model: db.Product, as: "productData", raw: true },
@@ -618,11 +616,13 @@ const getAllOrdersByUser = async (userId) => {
       nest: true,
     });
 
+    // Step 8: Map addressUsers to an object for easy access
     const addressUserMap = addressUsers.reduce((acc, addressUser) => {
       acc[addressUser.id] = addressUser;
       return acc;
     }, {});
 
+    // Step 9: Format orders with all required details
     const formattedOrders = await Promise.all(
       orders.map(async (order) => {
         const addressUser = addressUserMap[order.addressUserId] || {};
@@ -642,28 +642,23 @@ const getAllOrdersByUser = async (userId) => {
               (product) => product.productId === detail.productId
             );
             const product = productDetail?.productData || {};
-            const colors = await db.sequelize.query(
-              `
-              SELECT all_codes.*
-              FROM product_details
-              LEFT JOIN all_codes
-              ON product_details.color = all_codes.code
-              WHERE product_details.productId = ${productDetail.productId}
-              `,
-              { type: db.sequelize.QueryTypes.SELECT }
-            );
-            const images = await db.sequelize.query(
-              `
-              SELECT image FROM product_images
-              WHERE productDetailId IN (SELECT id FROM product_details WHERE productId = :productId)
-              `,
-              {
-                replacements: { productId: productDetail.productId },
-                type: db.sequelize.QueryTypes.SELECT,
-              }
-            );
 
-            const imageSet = new Set();
+            // Fetch colors directly from ProductDetail
+            const color = productDetail?.color || ""; // Replace with actual field name
+
+            // Fetch sizes from sizeData
+            const sizes = productDetail?.sizeData
+              ? [productDetail.sizeData]
+              : [];
+
+            // Fetch images related to the product
+            const images = await db.ProductImage.findAll({
+              where: { productDetailId: productDetail.id },
+              attributes: ["id", "image"],
+              raw: true,
+            });
+
+            // Convert images to base64
             const imagesBase64 = await Promise.all(
               images.map(async (img) => {
                 try {
@@ -676,14 +671,7 @@ const getAllOrdersByUser = async (userId) => {
                   await fs.stat(imagePath);
                   const data = await fs.readFile(imagePath);
                   const imageData = data.toString("base64");
-
-                  if (!imageSet.has(imageData)) {
-                    imageSet.add(imageData);
-                    return {
-                      image: `data:image/jpeg;base64,${imageData}`,
-                    };
-                  }
-                  return null;
+                  return `data:image/jpeg;base64,${imageData}`;
                 } catch (error) {
                   console.error("Error converting image to base64:", error);
                   return null;
@@ -691,33 +679,17 @@ const getAllOrdersByUser = async (userId) => {
               })
             ).then((results) => results.filter((result) => result !== null));
 
-            const uniqueSizes = new Set();
-            const sizes = productDetails.reduce((acc, detail) => {
-              const sizeData = detail.sizeData;
-              if (Array.isArray(sizeData)) {
-                sizeData.forEach((size) => {
-                  if (!uniqueSizes.has(size.sizeId)) {
-                    acc.push(size);
-                    uniqueSizes.add(size.sizeId);
-                  }
-                });
-              } else if (sizeData) {
-                if (!uniqueSizes.has(sizeData.sizeId)) {
-                  acc.push(sizeData);
-                  uniqueSizes.add(sizeData.sizeId);
-                }
-              }
-              return acc;
-            }, []);
+            const quantity = detail.quantity || 0;
+            const realPrice = detail.realPrice || 0;
 
             return {
               productName: product.name || "",
-              quantity: detail.quantity || 0,
-              productId: productDetail.productId,
-              priceProduct: detail.realPrice || 0,
-              colors,
+              quantity,
+              productId: product.productId,
+              priceProduct: realPrice,
+              color,
               sizes,
-              image: imagesBase64,
+              images: imagesBase64,
             };
           })
         );
@@ -747,6 +719,7 @@ const getAllOrdersByUser = async (userId) => {
       })
     );
 
+    // Step 10: Return formatted orders as the result
     return {
       result: formattedOrders,
       statusCode: 200,
