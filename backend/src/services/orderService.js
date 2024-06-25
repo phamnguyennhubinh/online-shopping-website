@@ -54,7 +54,7 @@ const createOrder = async (data) => {
           {
             model: db.ProductDetail,
             as: "productDetailData",
-            attributes: ["productId", "discountPrice", "originalPrice"],
+            attributes: ["id", "productId", "discountPrice", "originalPrice"],
           },
         ],
         raw: true,
@@ -68,6 +68,7 @@ const createOrder = async (data) => {
         orderDetails.push({
           orderId: order.id,
           productId: productSize.productDetailData.productId,
+          productDetailId: productSize.productDetailData.id,
           sizeId: item.sizeId,
           quantity: item.quantity,
           realPrice: item.quantity * price,
@@ -99,7 +100,11 @@ const createOrder = async (data) => {
         {
           orderId: order.id,
           addressUserId: data.addressUserId,
-          productIds: orderDetails.map((detail) => detail.productId),
+          productDetails: orderDetails.map((detail) => ({
+            productId: detail.productId,
+            productDetailId: detail.productDetailId,
+            sizeId: detail.sizeId,
+          })),
           userId: data.userId,
         },
       ],
@@ -180,21 +185,26 @@ const getAllOrders = async (data) => {
       nest: true,
     });
 
-    let productIds = orderDetails.map((detail) => detail.productId);
+    let sizeIds = orderDetails.map((detail) => detail.sizeId);
 
-    let productDetails = await db.ProductDetail.findAll({
-      where: { productId: productIds },
+    let productSizes = await db.ProductSize.findAll({
+      where: { id: sizeIds },
       include: [
-        { model: db.Product, as: "productData", raw: true },
         {
-          model: db.ProductImage,
-          as: "productImageData",
-          attributes: ["id", "image"],
-        },
-        {
-          model: db.ProductSize,
-          as: "sizeData",
-          attributes: ["id", "sizeId", "height", "weight"],
+          model: db.ProductDetail,
+          as: "productDetailData",
+          include: [
+            {
+              model: db.Product,
+              as: "productData",
+              raw: true,
+            },
+            {
+              model: db.ProductImage,
+              as: "productImageData",
+              attributes: ["id", "image"],
+            },
+          ],
         },
       ],
       raw: true,
@@ -226,19 +236,22 @@ const getAllOrders = async (data) => {
         );
 
         const products = await Promise.all(
-          orderDetails.map(async (detail) => {
-            const productDetail = productDetails.find(
-              (product) => product.productId === detail.productId
+          orderDetailData.map(async (detail) => {
+            const productSize = productSizes.find(
+              (size) => size.id === detail.sizeId
             );
-            const product = productDetail?.productData || {};
+            const productDetail = productSize?.productDetailData || {};
+            const product = productDetail.productData || {};
 
-            // Fetch colors directly from ProductDetail
-            const color = productDetail?.color || ""; // Replace with actual field name
+            // Fetch color directly from ProductDetail
+            const color = productDetail.color || "";
 
-            // Fetch sizes from sizeData
-            const sizes = productDetail?.sizeData
-              ? [productDetail.sizeData]
-              : [];
+            // Fetch size directly from ProductSize
+            const size = {
+              sizeId: productSize.sizeId,
+              height: productSize.height,
+              weight: productSize.weight,
+            };
 
             // Fetch images related to the product
             const images = await db.ProductImage.findAll({
@@ -274,10 +287,10 @@ const getAllOrders = async (data) => {
             return {
               productName: product.name || "",
               quantity,
-              productId: product.productId,
+              productId: productDetail.productId,
               priceProduct: realPrice,
               color,
-              sizes,
+              size,
               images: imagesBase64,
             };
           })
@@ -354,23 +367,28 @@ const getOrderById = async (data) => {
       nest: true,
     });
 
-    // Fetch productIds associated with orderDetails
-    const productIds = orderDetails.map((detail) => detail.productId);
+    // Extract productSizeIds from orderDetails
+    const productSizeIds = orderDetails.map((detail) => detail.sizeId);
 
-    // Fetch productDetails associated with productIds
-    const productDetails = await db.ProductDetail.findAll({
-      where: { productId: productIds },
+    // Fetch productDetails and sizes associated with productSizeIds
+    const productSizes = await db.ProductSize.findAll({
+      where: { id: productSizeIds },
       include: [
-        { model: db.Product, as: "productData", raw: true },
         {
-          model: db.ProductImage,
-          as: "productImageData",
-          attributes: ["id", "image"],
-        },
-        {
-          model: db.ProductSize,
-          as: "sizeData",
-          attributes: ["id", "sizeId", "height", "weight"],
+          model: db.ProductDetail,
+          as: "productDetailData",
+          include: [
+            {
+              model: db.Product,
+              as: "productData",
+              raw: true,
+            },
+            {
+              model: db.ProductImage,
+              as: "productImageData",
+              attributes: ["id", "image"],
+            },
+          ],
         },
       ],
       raw: true,
@@ -395,13 +413,21 @@ const getOrderById = async (data) => {
     // Build products array with details
     const products = await Promise.all(
       orderDetails.map(async (detail) => {
-        const productDetail = productDetails.find(
-          (product) => product.productId === detail.productId
+        const productSize = productSizes.find(
+          (size) => size.id === detail.sizeId
         );
+        const productDetail = productSize?.productDetailData || {};
         const product = productDetail?.productData || {};
 
-        // Fetch colors directly from ProductDetail
-        const colors = productDetail?.color || "";
+        // Fetch color directly from ProductDetail
+        const color = productDetail?.color || "";
+
+        // Fetch size directly from ProductSize
+        const size = {
+          sizeId: productSize.sizeId,
+          height: productSize.height,
+          weight: productSize.weight,
+        };
 
         // Fetch images related to the product
         const images = await db.ProductImage.findAll({
@@ -410,7 +436,7 @@ const getOrderById = async (data) => {
           raw: true,
         });
 
-        const imageSet = new Set();
+        // Convert images to base64
         const imagesBase64 = await Promise.all(
           images.map(async (img) => {
             try {
@@ -423,14 +449,7 @@ const getOrderById = async (data) => {
               await fs.stat(imagePath);
               const data = await fs.readFile(imagePath);
               const imageData = data.toString("base64");
-
-              if (!imageSet.has(imageData)) {
-                imageSet.add(imageData);
-                return {
-                  image: `data:image/jpeg;base64,${imageData}`,
-                };
-              }
-              return null;
+              return `data:image/jpeg;base64,${imageData}`;
             } catch (error) {
               console.error("Error converting image to base64:", error);
               return null;
@@ -438,16 +457,13 @@ const getOrderById = async (data) => {
           })
         ).then((results) => results.filter((result) => result !== null));
 
-        // Extract sizes from productDetails
-        const sizes = productDetail?.sizeData ? [productDetail.sizeData] : [];
-
         return {
           productName: product.name || "",
           quantity: detail.quantity || 0,
           productId: productDetail.productId,
           priceProduct: detail.realPrice || 0,
-          color: colors,
-          sizes,
+          color,
+          size,
           images: imagesBase64,
         };
       })
@@ -593,23 +609,28 @@ const getAllOrdersByUser = async (userId) => {
       nest: true,
     });
 
-    // Step 6: Extract productIds from orderDetails
-    const productIds = orderDetails.map((detail) => detail.productId);
+    // Step 6: Extract productSizeIds from orderDetails
+    const productSizeIds = orderDetails.map((detail) => detail.sizeId);
 
-    // Step 7: Find productDetails related to the productIds
-    const productDetails = await db.ProductDetail.findAll({
-      where: { productId: productIds },
+    // Step 7: Find productDetails and sizes related to the productSizeIds
+    const productSizes = await db.ProductSize.findAll({
+      where: { id: productSizeIds },
       include: [
-        { model: db.Product, as: "productData", raw: true },
         {
-          model: db.ProductImage,
-          as: "productImageData",
-          attributes: ["id", "image"],
-        },
-        {
-          model: db.ProductSize,
-          as: "sizeData",
-          attributes: ["id", "sizeId", "height", "weight"],
+          model: db.ProductDetail,
+          as: "productDetailData",
+          include: [
+            {
+              model: db.Product,
+              as: "productData",
+              raw: true,
+            },
+            {
+              model: db.ProductImage,
+              as: "productImageData",
+              attributes: ["id", "image"],
+            },
+          ],
         },
       ],
       raw: true,
@@ -638,18 +659,21 @@ const getAllOrdersByUser = async (userId) => {
 
         const products = await Promise.all(
           orderDetailData.map(async (detail) => {
-            const productDetail = productDetails.find(
-              (product) => product.productId === detail.productId
+            const productSize = productSizes.find(
+              (size) => size.id === detail.sizeId
             );
+            const productDetail = productSize?.productDetailData || {};
             const product = productDetail?.productData || {};
 
-            // Fetch colors directly from ProductDetail
-            const color = productDetail?.color || ""; // Replace with actual field name
+            // Fetch color directly from ProductDetail
+            const color = productDetail?.color || "";
 
-            // Fetch sizes from sizeData
-            const sizes = productDetail?.sizeData
-              ? [productDetail.sizeData]
-              : [];
+            // Fetch size directly from ProductSize
+            const size = {
+              sizeId: productSize.sizeId,
+              height: productSize.height,
+              weight: productSize.weight,
+            };
 
             // Fetch images related to the product
             const images = await db.ProductImage.findAll({
@@ -679,16 +703,13 @@ const getAllOrdersByUser = async (userId) => {
               })
             ).then((results) => results.filter((result) => result !== null));
 
-            const quantity = detail.quantity || 0;
-            const realPrice = detail.realPrice || 0;
-
             return {
               productName: product.name || "",
-              quantity,
-              productId: product.productId,
-              priceProduct: realPrice,
+              quantity: detail.quantity || 0,
+              productId: productDetail.productId,
+              priceProduct: detail.realPrice || 0,
               color,
-              sizes,
+              size,
               images: imagesBase64,
             };
           })
@@ -696,7 +717,7 @@ const getAllOrdersByUser = async (userId) => {
 
         const totalPrice =
           products.reduce((acc, product) => acc + product.priceProduct, 0) +
-          (typeShip.price || 0);
+          (order.typeShipData?.price || 0);
 
         return {
           id: order.id,
@@ -719,11 +740,10 @@ const getAllOrdersByUser = async (userId) => {
       })
     );
 
-    // Step 10: Return formatted orders as the result
     return {
       result: formattedOrders,
       statusCode: 200,
-      errors: ["Retrieved all orders by user successfully!"],
+      errors: ["Fetched all orders for the user successfully"],
     };
   } catch (error) {
     console.error("Error:", error);
@@ -734,6 +754,7 @@ const getAllOrdersByUser = async (userId) => {
     };
   }
 };
+
 
 const paymentOrderVNPay = async (req) => {
   try {
