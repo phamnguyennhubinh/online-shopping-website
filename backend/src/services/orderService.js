@@ -225,7 +225,6 @@ const getAllOrders = async (data) => {
     const formattedRows = await Promise.all(
       rows.map(async (order) => {
         const addressUser = addressUserMap[order.addressUserId] || {};
-        const statusOrder = order.statusOrderData?.value || "";
         const typeShip = {
           type: order.typeShipData?.type || "",
           price: order.typeShipData?.price || 0,
@@ -309,7 +308,7 @@ const getAllOrders = async (data) => {
             shipEmail: addressUser.shipEmail || "",
             shipPhoneNumber: addressUser.shipPhoneNumber || "",
           },
-          statusOrder,
+          statusOrder: order.statusOrderData?.code || "",
           typeShip,
           note: order.note || "",
           isPaymentOnline: order.isPaymentOnline || 0,
@@ -754,7 +753,6 @@ const getAllOrdersByUser = async (userId) => {
     };
   }
 };
-
 
 const paymentOrderVNPay = async (req) => {
   try {
