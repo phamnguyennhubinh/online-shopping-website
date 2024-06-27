@@ -171,6 +171,132 @@ const createProduct = async (data) => {
   }
 };
 
+// const getAllProductAdmin = async (data) => {
+//   try {
+//     let objectFilter = {
+//       include: [
+//         {
+//           model: db.AllCode,
+//           as: "categoryData",
+//           attributes: ["value", "code"],
+//         },
+//         {
+//           model: db.ProductDetail,
+//           as: "productDetailData",
+//           attributes: ["originalPrice", "discountPrice"],
+//           include: [
+//             {
+//               model: db.ProductImage,
+//               as: "productImageData",
+//               attributes: ["image"],
+//             },
+//           ],
+//         },
+//         {
+//           model: db.AllCode,
+//           as: "brandData",
+//           attributes: ["value", "code"],
+//         },
+//         {
+//           model: db.AllCode,
+//           as: "statusData",
+//           attributes: ["value", "code"],
+//         },
+//       ],
+//       attributes: ["id", "name", "categoryId", "view"],
+//       raw: true,
+//       nest: true,
+//     };
+//     // Filtering and sorting conditions
+//     if (data.limit && data.offset) {
+//       objectFilter.limit = +data.limit;
+//       objectFilter.offset = +data.offset;
+//     }
+//     if (data.categoryId && data.categoryId !== "ALL") {
+//       objectFilter.where.categoryId = data.categoryId;
+//     }
+//     if (data.brandId && data.brandId !== "ALL") {
+//       objectFilter.where.brandId = data.brandId;
+//     }
+//     if (data.statusId && data.statusId !== "ALL") {
+//       objectFilter.where.statusId = data.statusId;
+//     }
+//     if (data.sortName === "true") {
+//       objectFilter.order = [["name", "ASC"]];
+//     }
+//     if (data.keyword && data.keyword !== "") {
+//       objectFilter.where.name = { [Op.substring]: data.keyword };
+//     }
+//     let res = await db.Product.findAndCountAll(objectFilter);
+//     if (data.sortPrice && data.sortPrice === "true") {
+//       res.rows.sort(dynamicSortMultiple("price"));
+//     }
+//     const productsWithDetails = [];
+
+//     for (const product of res.rows) {
+//       const images = await db.sequelize.query(
+//         `
+//         SELECT image FROM product_images WHERE productDetailId = ${product.id}
+//       `,
+//         { type: db.sequelize.QueryTypes.SELECT }
+//       );
+
+//       const imagesBase64 = [];
+//       try {
+//         for (const img of images) {
+//           const imagePath = path.join(__dirname, "../..", "uploads", img.image);
+//           await fs.stat(imagePath);
+//           const data = await fs.readFile(imagePath);
+//           const imageData = data.toString("base64");
+//           const imageBase64 = `data:image/jpeg;base64,${imageData}`;
+//           imagesBase64.push({
+//             image: imageBase64,
+//           });
+//         }
+//       } catch (error) {
+//         console.error(
+//           `Error processing images for product ID ${product.id}: ${error.message}`
+//         );
+//         continue;
+//       }
+
+//       if (!productsWithDetails.find((item) => item.id === product.id)) {
+//         const productDetail = product.productDetailData;
+//         const brand = product.brandData ? product.brandData.value : "";
+//         const status = product.statusData ? product.statusData.value : "";
+//         let image = "";
+
+//         if (productDetail && productDetail.productImageData) {
+//           const firstImage = Array.isArray(productDetail.productImageData)
+//             ? productDetail.productImageData[0]
+//             : productDetail.productImageData;
+//           image = firstImage ? firstImage.image : "";
+//         }
+
+//         productsWithDetails.push({
+//           id: product.id,
+//           name: product.name,
+//           category: product.categoryData.value,
+//           view: product.view,
+//           brand: brand,
+//           status: status,
+//           images: imagesBase64,
+//           originalPrice: productDetail.originalPrice || "",
+//           discountPrice: productDetail.discountPrice || "",
+//         });
+//       }
+//     }
+//     return {
+//       result: productsWithDetails,
+//       statusCode: 200,
+//       errors: ["Get all products by user successfully!"],
+//     };
+//   } catch (error) {
+//     console.error(error);
+//     return errorResponse(error.message);
+//   }
+// };
+
 const getAllProductAdmin = async (data) => {
   try {
     let objectFilter = {
@@ -183,12 +309,17 @@ const getAllProductAdmin = async (data) => {
         {
           model: db.ProductDetail,
           as: "productDetailData",
-          attributes: ["originalPrice", "discountPrice"],
+          attributes: ["id", "originalPrice", "discountPrice"],
           include: [
             {
               model: db.ProductImage,
               as: "productImageData",
               attributes: ["image"],
+            },
+            {
+              model: db.ProductSize,
+              as: "sizeData",
+              attributes: ["id", "sizeId", "height", "weight"],
             },
           ],
         },
@@ -207,36 +338,67 @@ const getAllProductAdmin = async (data) => {
       raw: true,
       nest: true,
     };
+
     // Filtering and sorting conditions
     if (data.limit && data.offset) {
       objectFilter.limit = +data.limit;
       objectFilter.offset = +data.offset;
     }
     if (data.categoryId && data.categoryId !== "ALL") {
-      objectFilter.where.categoryId = data.categoryId;
+      objectFilter.where = { categoryId: data.categoryId };
     }
     if (data.brandId && data.brandId !== "ALL") {
-      objectFilter.where.brandId = data.brandId;
+      objectFilter.where = { ...objectFilter.where, brandId: data.brandId };
     }
     if (data.statusId && data.statusId !== "ALL") {
-      objectFilter.where.statusId = data.statusId;
+      objectFilter.where = { ...objectFilter.where, statusId: data.statusId };
     }
     if (data.sortName === "true") {
       objectFilter.order = [["name", "ASC"]];
     }
     if (data.keyword && data.keyword !== "") {
-      objectFilter.where.name = { [Op.substring]: data.keyword };
+      objectFilter.where = {
+        ...objectFilter.where,
+        name: { [Op.substring]: data.keyword },
+      };
     }
+
     let res = await db.Product.findAndCountAll(objectFilter);
+
     if (data.sortPrice && data.sortPrice === "true") {
       res.rows.sort(dynamicSortMultiple("price"));
     }
+
     const productsWithDetails = [];
 
+    // Object to keep track of products by ID
+    const productsMap = {};
+
     for (const product of res.rows) {
+      const productId = product.id;
+
+      // Ensure product ID exists in productsMap
+      if (!productsMap[productId]) {
+        // Initialize entry for product ID
+        productsMap[productId] = {
+          id: productId,
+          name: product.name,
+          category: product.categoryData.value,
+          view: product.view,
+          brand: product.brandData ? product.brandData.value : "",
+          status: product.statusData ? product.statusData.value : "",
+          images: [],
+          sizes: [],
+          originalPrice: "",
+          discountPrice: "",
+        };
+      }
+
       const images = await db.sequelize.query(
         `
-        SELECT image FROM product_images WHERE productDetailId = ${product.id}
+        SELECT image FROM product_images WHERE productDetailId IN (
+          SELECT id FROM product_details WHERE productId = ${productId}
+        )
       `,
         { type: db.sequelize.QueryTypes.SELECT }
       );
@@ -255,37 +417,57 @@ const getAllProductAdmin = async (data) => {
         }
       } catch (error) {
         console.error(
-          `Error processing images for product ID ${product.id}: ${error.message}`
+          `Error processing images for product ID ${productId}: ${error.message}`
         );
         continue;
       }
 
-      if (!productsWithDetails.find((item) => item.id === product.id)) {
-        const productDetail = product.productDetailData;
-        const brand = product.brandData ? product.brandData.value : "";
-        const status = product.statusData ? product.statusData.value : "";
-        let image = "";
+      // Add images to the product entry in productsMap
+      productsMap[productId].images = imagesBase64;
 
-        if (productDetail && productDetail.productImageData) {
-          const firstImage = Array.isArray(productDetail.productImageData)
-            ? productDetail.productImageData[0]
-            : productDetail.productImageData;
-          image = firstImage ? firstImage.image : "";
+      const productDetails = Array.isArray(product.productDetailData)
+        ? product.productDetailData
+        : [product.productDetailData];
+
+      for (const productDetail of productDetails) {
+        const sizes = [];
+        if (productDetail.sizeData) {
+          const sizeData = Array.isArray(productDetail.sizeData)
+            ? productDetail.sizeData
+            : [productDetail.sizeData];
+
+          sizeData.forEach((size) => {
+            sizes.push({
+              id: size.id,
+              sizeId: size.sizeId,
+              height: size.height,
+              weight: size.weight,
+            });
+          });
         }
 
-        productsWithDetails.push({
-          id: product.id,
-          name: product.name,
-          category: product.categoryData.value,
-          view: product.view,
-          brand: brand,
-          status: status,
-          images: imagesBase64,
-          originalPrice: productDetail.originalPrice || "",
-          discountPrice: productDetail.discountPrice || "",
-        });
+        // Add sizes to the product entry in productsMap
+        productsMap[productId].sizes.push(...sizes);
+
+        // Set originalPrice and discountPrice if not already set
+        if (!productsMap[productId].originalPrice) {
+          productsMap[productId].originalPrice =
+            productDetail.originalPrice || "";
+        }
+        if (!productsMap[productId].discountPrice) {
+          productsMap[productId].discountPrice =
+            productDetail.discountPrice || "";
+        }
       }
     }
+
+    // Convert productsMap values to an array
+    for (const productId in productsMap) {
+      if (Object.hasOwnProperty.call(productsMap, productId)) {
+        productsWithDetails.push(productsMap[productId]);
+      }
+    }
+
     return {
       result: productsWithDetails,
       statusCode: 200,
@@ -421,7 +603,7 @@ const getAllProductUser = async (data) => {
     };
   } catch (error) {
     console.error("Error retrieving products:", error);
-    return errorResponse(error.message)
+    return errorResponse(error.message);
   }
 };
 
