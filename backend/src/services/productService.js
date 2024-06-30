@@ -171,135 +171,12 @@ const createProduct = async (data) => {
   }
 };
 
-// const getAllProductAdmin = async (data) => {
-//   try {
-//     let objectFilter = {
-//       include: [
-//         {
-//           model: db.AllCode,
-//           as: "categoryData",
-//           attributes: ["value", "code"],
-//         },
-//         {
-//           model: db.ProductDetail,
-//           as: "productDetailData",
-//           attributes: ["originalPrice", "discountPrice"],
-//           include: [
-//             {
-//               model: db.ProductImage,
-//               as: "productImageData",
-//               attributes: ["image"],
-//             },
-//           ],
-//         },
-//         {
-//           model: db.AllCode,
-//           as: "brandData",
-//           attributes: ["value", "code"],
-//         },
-//         {
-//           model: db.AllCode,
-//           as: "statusData",
-//           attributes: ["value", "code"],
-//         },
-//       ],
-//       attributes: ["id", "name", "categoryId", "view"],
-//       raw: true,
-//       nest: true,
-//     };
-//     // Filtering and sorting conditions
-//     if (data.limit && data.offset) {
-//       objectFilter.limit = +data.limit;
-//       objectFilter.offset = +data.offset;
-//     }
-//     if (data.categoryId && data.categoryId !== "ALL") {
-//       objectFilter.where.categoryId = data.categoryId;
-//     }
-//     if (data.brandId && data.brandId !== "ALL") {
-//       objectFilter.where.brandId = data.brandId;
-//     }
-//     if (data.statusId && data.statusId !== "ALL") {
-//       objectFilter.where.statusId = data.statusId;
-//     }
-//     if (data.sortName === "true") {
-//       objectFilter.order = [["name", "ASC"]];
-//     }
-//     if (data.keyword && data.keyword !== "") {
-//       objectFilter.where.name = { [Op.substring]: data.keyword };
-//     }
-//     let res = await db.Product.findAndCountAll(objectFilter);
-//     if (data.sortPrice && data.sortPrice === "true") {
-//       res.rows.sort(dynamicSortMultiple("price"));
-//     }
-//     const productsWithDetails = [];
-
-//     for (const product of res.rows) {
-//       const images = await db.sequelize.query(
-//         `
-//         SELECT image FROM product_images WHERE productDetailId = ${product.id}
-//       `,
-//         { type: db.sequelize.QueryTypes.SELECT }
-//       );
-
-//       const imagesBase64 = [];
-//       try {
-//         for (const img of images) {
-//           const imagePath = path.join(__dirname, "../..", "uploads", img.image);
-//           await fs.stat(imagePath);
-//           const data = await fs.readFile(imagePath);
-//           const imageData = data.toString("base64");
-//           const imageBase64 = `data:image/jpeg;base64,${imageData}`;
-//           imagesBase64.push({
-//             image: imageBase64,
-//           });
-//         }
-//       } catch (error) {
-//         console.error(
-//           `Error processing images for product ID ${product.id}: ${error.message}`
-//         );
-//         continue;
-//       }
-
-//       if (!productsWithDetails.find((item) => item.id === product.id)) {
-//         const productDetail = product.productDetailData;
-//         const brand = product.brandData ? product.brandData.value : "";
-//         const status = product.statusData ? product.statusData.value : "";
-//         let image = "";
-
-//         if (productDetail && productDetail.productImageData) {
-//           const firstImage = Array.isArray(productDetail.productImageData)
-//             ? productDetail.productImageData[0]
-//             : productDetail.productImageData;
-//           image = firstImage ? firstImage.image : "";
-//         }
-
-//         productsWithDetails.push({
-//           id: product.id,
-//           name: product.name,
-//           category: product.categoryData.value,
-//           view: product.view,
-//           brand: brand,
-//           status: status,
-//           images: imagesBase64,
-//           originalPrice: productDetail.originalPrice || "",
-//           discountPrice: productDetail.discountPrice || "",
-//         });
-//       }
-//     }
-//     return {
-//       result: productsWithDetails,
-//       statusCode: 200,
-//       errors: ["Get all products by user successfully!"],
-//     };
-//   } catch (error) {
-//     console.error(error);
-//     return errorResponse(error.message);
-//   }
-// };
-
 const getAllProductAdmin = async (data) => {
   try {
     let objectFilter = {
+      where: {
+        statusId: { [Op.ne]: "S8" }, // Exclude deleted products
+      },
       include: [
         {
           model: db.AllCode,
@@ -616,7 +493,7 @@ const getProductById = async (data) => {
 
     // Fetch the product to get the current view count
     const product = await db.Product.findOne({
-      where: { id },
+      where: { id, statusId: { [Op.ne]: "S8" } },
       attributes: ["id", "view"],
       raw: true,
     });
@@ -921,61 +798,80 @@ const deleteProduct = async (productId) => {
         return notFound("Product");
       }
 
-      // Find all product details for the given product
+      // Get product details associated with the product
       const productDetails = await db.ProductDetail.findAll({
         where: { productId },
+        attributes: ["id"],
         transaction,
       });
 
-      // Extract product detail IDs
       const productDetailIds = productDetails.map((detail) => detail.id);
 
-      // Delete associated images
-      await db.ProductImage.destroy({
-        where: { productDetailId: productDetailIds },
-        transaction,
-      });
-
-      // Delete associated sizes
-      await db.ProductSize.destroy({
-        where: { productDetailId: productDetailIds },
-        transaction,
-      });
-
-      // Find receipts associated with the product details
+      // Get receipt details associated with product details
       const receiptDetails = await db.ReceiptDetail.findAll({
         where: { sizeId: productDetailIds },
+        attributes: ["receiptId"],
         transaction,
       });
 
       const receiptIds = receiptDetails.map((detail) => detail.receiptId);
 
-      // Delete associated receipt details
-      await db.ReceiptDetail.destroy({
-        where: { sizeId: productDetailIds },
-        transaction,
-      });
+      // Update status of product details to "S8"
+      await db.ProductDetail.update(
+        { statusId: "S8" },
+        {
+          where: { productId },
+          transaction,
+        }
+      );
 
-      // Delete associated receipts
-      await db.Receipt.destroy({
-        where: { id: receiptIds },
-        transaction,
-      });
+      // Update status of associated images to "S8"
+      await db.ProductImage.update(
+        { statusId: "S8" },
+        {
+          where: { productDetailId: productDetailIds },
+          transaction,
+        }
+      );
 
-      // Delete product details
-      await db.ProductDetail.destroy({
-        where: { productId },
-        transaction,
-      });
+      // Update status of associated sizes to "S8"
+      await db.ProductSize.update(
+        { statusId: "S8" },
+        {
+          where: { productDetailId: productDetailIds },
+          transaction,
+        }
+      );
 
-      // Finally, delete the product
-      await db.Product.destroy({
-        where: { id: productId },
-        transaction,
-      });
+      // Update status of associated receipt details to "S8"
+      await db.ReceiptDetail.update(
+        { statusId: "S8" },
+        {
+          where: { sizeId: productDetailIds },
+          transaction,
+        }
+      );
+
+      // Update status of associated receipts to "S8"
+      await db.Receipt.update(
+        { statusId: "S8" },
+        {
+          where: { id: receiptIds },
+          transaction,
+        }
+      );
+
+      // Finally, update the status of the product to "S8"
+      await db.Product.update(
+        { statusId: "S8" },
+        {
+          where: { id: productId },
+          transaction,
+        }
+      );
     });
 
-    return successResponse("Product deleted successfully");
+    return successResponse("Product deleted");
   } catch (error) {
     console.error(error);
     return errorResponse(error.message);
